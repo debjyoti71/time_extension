@@ -3,9 +3,10 @@ import * as path from 'path';
 import * as os from 'os';
 
 export interface FileRecord {
-  total: number; // seconds
+  total: number;
   dailyTotal: { [date: string]: number };
-  lastActive: number; // timestamp
+  dailyHours: { [date: string]: number[] }; // hours active each day
+  lastActive: number;
 }
 
 export interface TrackingData {
@@ -40,13 +41,18 @@ export function save(data: TrackingData): void {
 
 export function addTime(filePath: string, seconds: number): void {
   const data = load();
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const hour = now.getHours();
   if (!data.files[filePath]) {
-    data.files[filePath] = { total: 0, dailyTotal: {}, lastActive: Date.now() };
+    data.files[filePath] = { total: 0, dailyTotal: {}, dailyHours: {}, lastActive: Date.now() };
   }
   const rec = data.files[filePath];
   rec.total += seconds;
   rec.dailyTotal[today] = (rec.dailyTotal[today] || 0) + seconds;
+  if (!rec.dailyHours) { rec.dailyHours = {}; }
+  if (!rec.dailyHours[today]) { rec.dailyHours[today] = []; }
+  if (!rec.dailyHours[today].includes(hour)) { rec.dailyHours[today].push(hour); }
   rec.lastActive = Date.now();
   save(data);
 }

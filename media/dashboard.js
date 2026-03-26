@@ -271,34 +271,49 @@
       options: { responsive: true, plugins: { legend: { display: false } }, scales: scaleOpts('h') }
     });
 
-    // 7. Hour of day
+    // 7. Hour of day - consistency line chart
     const hourLabels = Array.from({ length: 24 }, function(_, i) {
       if (i === 0)  { return '12am'; }
       if (i === 12) { return '12pm'; }
       return i < 12 ? (i + 'am') : ((i - 12) + 'pm');
     });
-    const maxHour = Math.max.apply(null, data.hourBuckets.concat([1]));
     makeChart('hourChart', {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: hourLabels,
         datasets: [{
-          data: data.hourBuckets.map(function(v) { return +(v / 3600).toFixed(2); }),
-          backgroundColor: data.hourBuckets.map(function(v) {
-            const t = v / maxHour;
-            if (t > 0.7) { return C[2]; }
-            if (t > 0.3) { return C[0]; }
-            return 'rgba(97,175,239,0.25)';
+          data: data.hourBuckets,
+          borderColor: '#e5c07b',
+          backgroundColor: 'rgba(229,192,123,0.08)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: data.hourBuckets.map(function(v) {
+            if (v >= 70) { return '#e5c07b'; }
+            if (v >= 30) { return '#61afef'; }
+            return 'rgba(97,175,239,0.3)';
           }),
-          borderRadius: 3
+          pointBorderWidth: 0
         }]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ' ' + ctx.parsed.y + '% of days'; }
+            }
+          }
+        },
         scales: {
           x: { ticks: { color: TICK }, grid: { display: false } },
-          y: { ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } }
+          y: {
+            min: 0, max: 100,
+            ticks: { color: TICK, callback: function(v) { return v + '%'; } },
+            grid: { color: GRID }
+          }
         }
       }
     });

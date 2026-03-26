@@ -68,18 +68,7 @@ function buildDashboardData() {
     last6months[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
   }
 
-  // hour of day buckets
-  const hourBuckets: number[] = new Array(24).fill(0);
-  for (const [filePath, rec] of Object.entries(data.files)) {
-    const project = getProjectFolder(filePath);
-    if (isJunk(project, filePath)) { continue; }
-    if (rec.lastActive) {
-      const la = new Date(rec.lastActive);
-      if (!(la.getHours() === 0 && la.getMinutes() === 0)) {
-        hourBuckets[la.getHours()] += rec.total;
-      }
-    }
-  }
+  // hour of day buckets — computed after main loop (needs activeDaysSet)
 
   const activeDaysSet = new Set<string>();
   let lifetimeSecs = 0;
@@ -122,6 +111,25 @@ function buildDashboardData() {
     projectMap[project].weekSecs  += weekSecs;
     projectMap[project].monthSecs += monthSecs;
     projectMap[project].lastActive = Math.max(projectMap[project].lastActive, rec.lastActive);
+  }
+
+  // hour of day consistency % using real dailyHours data
+  const hourBuckets: number[] = new Array(24).fill(0);
+  const hourDaysSet: Set<string>[] = Array.from({length: 24}, () => new Set<string>());
+  for (const [filePath, rec] of Object.entries(data.files)) {
+    const project = getProjectFolder(filePath);
+    if (isJunk(project, filePath)) { continue; }
+    const dh = (rec as any).dailyHours as { [date: string]: number[] } | undefined;
+    if (!dh) { continue; }
+    for (const [date, hours] of Object.entries(dh)) {
+      for (const h of hours) {
+        hourDaysSet[h].add(date);
+      }
+    }
+  }
+  const totalActiveDays = activeDaysSet.size || 1;
+  for (let h = 0; h < 24; h++) {
+    hourBuckets[h] = Math.round(hourDaysSet[h].size / totalActiveDays * 100);
   }
 
   const folderRows = Object.entries(projectMap)
