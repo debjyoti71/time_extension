@@ -2,7 +2,7 @@
   "name": "time-tracker",
   "displayName": "Time Tracker",
   "description": "Track coding time per file and directory, locally",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "publisher": "local-dev",
   "engines": {
     "vscode": "^1.85.0"

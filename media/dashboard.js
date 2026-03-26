@@ -271,28 +271,30 @@
       options: { responsive: true, plugins: { legend: { display: false } }, scales: scaleOpts('h') }
     });
 
-    // 7. Hour of day - consistency line chart
+    // 7. Hour of day - total hours (last 30 days)
     const hourLabels = Array.from({ length: 24 }, function(_, i) {
       if (i === 0)  { return '12am'; }
       if (i === 12) { return '12pm'; }
       return i < 12 ? (i + 'am') : ((i - 12) + 'pm');
     });
+    const hourVals = data.hourBuckets || [];
+    const maxHour = Math.max.apply(null, hourVals.concat([0]));
     makeChart('hourChart', {
       type: 'line',
       data: {
         labels: hourLabels,
         datasets: [{
-          data: data.hourBuckets,
+          data: hourVals,
           borderColor: '#e5c07b',
-          backgroundColor: 'rgba(229,192,123,0.08)',
+          backgroundColor: 'rgba(229,192,123,0.12)',
           borderWidth: 2,
           fill: true,
-          tension: 0.4,
+          tension: 0.35,
           pointRadius: 4,
-          pointBackgroundColor: data.hourBuckets.map(function(v) {
-            if (v >= 70) { return '#e5c07b'; }
-            if (v >= 30) { return '#61afef'; }
-            return 'rgba(97,175,239,0.3)';
+          pointBackgroundColor: hourVals.map(function(v) {
+            if (!v) { return 'rgba(97,175,239,0.25)'; }
+            if (v >= maxHour * 0.7) { return '#e5c07b'; }
+            return '#61afef';
           }),
           pointBorderWidth: 0
         }]
@@ -303,15 +305,16 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: function(ctx) { return ' ' + ctx.parsed.y + '% of days'; }
+              label: function(ctx) { return ' ' + ctx.parsed.y + 'h (last 30 days)'; }
             }
           }
         },
         scales: {
           x: { ticks: { color: TICK }, grid: { display: false } },
           y: {
-            min: 0, max: 100,
-            ticks: { color: TICK, callback: function(v) { return v + '%'; } },
+            beginAtZero: true,
+            suggestedMax: Math.max(1, Math.ceil(maxHour + 0.2)),
+            ticks: { color: TICK, callback: function(v) { return v + 'h'; } },
             grid: { color: GRID }
           }
         }

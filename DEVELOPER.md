@@ -153,7 +153,7 @@ Reads all file records from `data.json` and computes:
 - `last7` / `last7stacked` / `last7projects` — 7-day data per project
 - `last30` / `last30stacked` / `top6projects` — 30-day data
 - `last6months` — monthly totals
-- `hourBuckets` — 24-hour activity distribution
+- `hourBuckets` — total hours per hour bucket (last 30 days)
 - `weekTop5` — top 5 projects this week
 - `langMap` — file count by language per project
 - `dirTotals` — lifetime seconds per project

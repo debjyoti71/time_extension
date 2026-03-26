@@ -74,6 +74,7 @@ function buildDashboardData() {
   let lifetimeSecs = 0;
   let mostActiveProjSecs = 0;
   let mostActiveProj = '—';
+  const hourTotals: number[] = new Array(24).fill(0); // seconds per hour bucket (last 30 days)
 
   for (const [filePath, rec] of Object.entries(data.files)) {
     const project = getProjectFolder(filePath);
@@ -101,6 +102,19 @@ function buildDashboardData() {
       if (secs > 0) { activeDaysSet.add(date); }
     }
 
+    const dh = (rec as any).dailyHours as { [date: string]: { [hour: string]: number } } | undefined;
+    if (dh) {
+      for (const [date, hours] of Object.entries(dh)) {
+        if (!last30Keys.has(date)) { continue; }
+        for (const [hStr, sec] of Object.entries(hours)) {
+          const h = Number(hStr);
+          if (!Number.isInteger(h) || h < 0 || h > 23) { continue; }
+          const val = typeof sec === 'number' && Number.isFinite(sec) ? sec : 0;
+          hourTotals[h] += val;
+        }
+      }
+    }
+
     lifetimeSecs += rec.total;
 
     if (!projectMap[project]) {
@@ -113,24 +127,8 @@ function buildDashboardData() {
     projectMap[project].lastActive = Math.max(projectMap[project].lastActive, rec.lastActive);
   }
 
-  // hour of day consistency % using real dailyHours data
-  const hourBuckets: number[] = new Array(24).fill(0);
-  const hourDaysSet: Set<string>[] = Array.from({length: 24}, () => new Set<string>());
-  for (const [filePath, rec] of Object.entries(data.files)) {
-    const project = getProjectFolder(filePath);
-    if (isJunk(project, filePath)) { continue; }
-    const dh = (rec as any).dailyHours as { [date: string]: number[] } | undefined;
-    if (!dh) { continue; }
-    for (const [date, hours] of Object.entries(dh)) {
-      for (const h of hours) {
-        hourDaysSet[h].add(date);
-      }
-    }
-  }
-  const totalActiveDays = activeDaysSet.size || 1;
-  for (let h = 0; h < 24; h++) {
-    hourBuckets[h] = Math.round(hourDaysSet[h].size / totalActiveDays * 100);
-  }
+  // hour of day — total hours per bucket (last 30 days)
+  const hourBuckets: number[] = hourTotals.map(s => +((s / 3600)).toFixed(1));
 
   const folderRows = Object.entries(projectMap)
     .map(([name, v]) => ({ name, ...v }))
