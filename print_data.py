@@ -112,17 +112,18 @@ for rec in files.values():
                 val = secs if isinstance(secs, (int, float)) else 0
                 hour_totals[hi] += val
 
-max_secs = max(hour_totals.values()) if hour_totals else 0
+days_count = len(last30) or 1
 print(f"\n[ CODING PATTERNS — HOUR OF DAY (LAST 30 DAYS) ]")
-print(f"  (total coding time in each hour bucket)")
-print(f"  {'Hour':<8} {'Time':>12}  Bar")
-print(f"  {'-'*8} {'-'*12}  {'-'*20}")
+print(f"  (% of that hour you coded on average)")
+print(f"  {'Hour':<8} {'%':>6}  Bar")
+print(f"  {'-'*8} {'-'*6}  {'-'*20}")
 for h in range(24):
     label = '12am' if h == 0 else '12pm' if h == 12 else f"{h}am" if h < 12 else f"{h-12}pm"
-    secs = int(round(hour_totals.get(h, 0)))
-    bar_len = 0 if max_secs == 0 else int(secs / max_secs * 20)
+    pct = hour_totals.get(h, 0) / (days_count * 3600) * 100
+    pct = round(pct, 1)
+    bar_len = int(pct / 5)
     bar = '#' * bar_len
-    print(f"  {label:<8} {fmt(secs):>12}  {bar}")
+    print(f"  {label:<8} {pct:>5.1f}%  {bar}")
 
 # ── Language breakdown ─────────────────────────────────────────────────────────
 EXT_MAP = {

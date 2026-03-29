@@ -60,6 +60,7 @@ function buildDashboardData() {
     last30[d.toISOString().slice(0, 10)] = 0;
   }
   const last30Keys = new Set(Object.keys(last30));
+  const last30DaysCount = last30Keys.size || 1;
 
   // last 6 months
   const last6months: { [ym: string]: number } = {};
@@ -127,8 +128,10 @@ function buildDashboardData() {
     projectMap[project].lastActive = Math.max(projectMap[project].lastActive, rec.lastActive);
   }
 
-  // hour of day — total hours per bucket (last 30 days)
-  const hourBuckets: number[] = hourTotals.map(s => +((s / 3600)).toFixed(1));
+  // hour of day — percent of that hour used on average (last 30 days)
+  const hourBuckets: number[] = hourTotals.map(s =>
+    Math.min(100, +((s / (last30DaysCount * 3600)) * 100).toFixed(1))
+  );
 
   const folderRows = Object.entries(projectMap)
     .map(([name, v]) => ({ name, ...v }))

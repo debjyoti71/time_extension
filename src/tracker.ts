@@ -25,6 +25,7 @@ let sessionStart: number | undefined;
 let flushTimer: NodeJS.Timeout | undefined;
 let heartbeatProc: ChildProcess | undefined;
 let pendingSeconds: number = 0;
+let lastTick: number = Date.now();
 
 const HEARTBEAT_FILE = path.join(os.homedir(), '.vscode-time-tracker', 'heartbeat.json');
 
@@ -113,6 +114,21 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   flushTimer = setInterval(() => {
+    const now = Date.now();
+    const gap = now - lastTick;
+    lastTick = now;
+
+    // If the machine slept or VS Code was suspended for longer than idle threshold,
+    // drop the gap to avoid counting sleep as active time.
+    const slept = gap > (FLUSH_INTERVAL_MS + IDLE_TIMEOUT_MS);
+    if (slept) {
+      pauseCurrent();
+      flushPending();
+      if (!isIdle() && currentFile) { resumeCurrent(); }
+      fireTick();
+      return;
+    }
+
     if (isIdle()) {
       if (sessionStart) { pauseCurrent(); flushPending(); }
     } else {

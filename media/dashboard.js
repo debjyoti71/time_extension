@@ -110,7 +110,8 @@
     var svgParts = [];
     nodes.forEach(function(n) {
       var color = LANG_COLORS[n.lang] || '#555';
-      var textColor = (n.lang === 'JavaScript') ? '#222' : '#c8f0c8';
+      // Use a bright label color so yellow JS stroke stays readable
+      var textColor = '#e6f1ff';
       var label = n.lang.length > 10 ? n.lang.slice(0,9)+'...' : n.lang;
       svgParts.push(
         '<circle cx="'+n.x+'" cy="'+n.y+'" r="'+n.r+'" fill="#2a2a32" stroke="'+color+'" stroke-width="2"/>',
@@ -271,7 +272,7 @@
       options: { responsive: true, plugins: { legend: { display: false } }, scales: scaleOpts('h') }
     });
 
-    // 7. Hour of day - total hours (last 30 days)
+    // 7. Hour of day - percentage of hour used (last 30 days)
     const hourLabels = Array.from({ length: 24 }, function(_, i) {
       if (i === 0)  { return '12am'; }
       if (i === 12) { return '12pm'; }
@@ -305,16 +306,16 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: function(ctx) { return ' ' + ctx.parsed.y + 'h (last 30 days)'; }
+              label: function(ctx) { return ' ' + ctx.parsed.y + '% of that hour'; }
             }
           }
         },
         scales: {
           x: { ticks: { color: TICK }, grid: { display: false } },
           y: {
-            beginAtZero: true,
-            suggestedMax: Math.max(1, Math.ceil(maxHour + 0.2)),
-            ticks: { color: TICK, callback: function(v) { return v + 'h'; } },
+            min: 0,
+            max: 100,
+            ticks: { color: TICK, callback: function(v) { return v + '%'; } },
             grid: { color: GRID }
           }
         }
