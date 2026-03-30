@@ -6,8 +6,30 @@ import { onTick } from './tracker';
 
 let panel: vscode.WebviewPanel | undefined;
 
+function getWorkspaceProject(filePath: string): string | undefined {
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders) { return undefined; }
+
+  const target = filePath.replace(/\\/g, '/').toLowerCase();
+  let best: { name: string; path: string } | undefined;
+
+  for (const folder of folders) {
+    const wsPath = folder.uri.fsPath.replace(/\\/g, '/').toLowerCase();
+    if (target.startsWith(wsPath + '/')) {
+      if (!best || wsPath.length > best.path.length) {
+        best = { name: folder.name, path: wsPath };
+      }
+    }
+  }
+
+  return best?.name;
+}
+
 function getProjectFolder(filePath: string): string {
-  const parts = filePath.replace(/\\/g, '/').split('/');
+  const workspaceName = getWorkspaceProject(filePath);
+  if (workspaceName) { return workspaceName; }
+
+  const parts = filePath.replace(/\\/g, '/').split('/').filter(Boolean);
   const rootIdx = parts.findIndex(p =>
     p.toLowerCase() === 'my_projects' ||
     p.toLowerCase() === 'projects' ||
@@ -15,8 +37,13 @@ function getProjectFolder(filePath: string): string {
     p.toLowerCase() === 'workspace'
   );
   if (rootIdx !== -1 && parts[rootIdx + 1]) { return parts[rootIdx + 1]; }
-  if (parts.length >= 3) { return parts[parts.length - 2]; }
-  return parts[parts.length - 1] || filePath;
+
+  // If path is drive-rooted like "E:/proj/src/file", pick the first folder after the drive.
+  if (parts.length >= 2 && /^[a-z]:$/i.test(parts[0])) { return parts[1]; }
+
+  // Fallback: parent directory, else the path itself.
+  if (parts.length >= 2) { return parts[parts.length - 2]; }
+  return parts[0] || filePath;
 }
 
 const JUNK = new Set(['downloads', 'temp', 'tmp', 'appdata', '.aws', 'rest_framework',
@@ -135,7 +162,7 @@ function buildDashboardData() {
 
   const folderRows = Object.entries(projectMap)
     .map(([name, v]) => ({ name, ...v }))
-    .filter(r => r.totalSecs >= 60)
+    .filter(r => r.totalSecs > 0)
     .sort((a, b) => b.totalSecs - a.totalSecs);
 
   for (const r of folderRows) {
