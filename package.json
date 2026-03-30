@@ -1,9 +1,13 @@
 {
-  "name": "time-tracker",
-  "displayName": "Time Tracker",
+  "name": "dev-timekeeper",
+  "displayName": "Dev Timekeeper",
   "description": "Track coding time per file and directory, locally",
-  "version": "1.0.14",
-  "publisher": "local-dev",
+  "version": "1.0.15",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/debjyoti-ghosh/time-tracker.git"
+  },
+  "publisher": "DebjyotiGhosh",
   "engines": {
     "vscode": "^1.85.0"
   },

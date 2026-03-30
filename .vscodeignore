@@ -1,0 +1,13 @@
+.gitignore
+.vscode/**
+node_modules/**
+**/*.map
+**/*.tsbuildinfo
+**/*.log
+coverage/**
+tmp/**
+media/chart.min.js
+media/treemap.min.js
+
+# keep packaged assets we actually need
+!media/dashboard.js
