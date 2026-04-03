@@ -188,18 +188,30 @@ function buildDashboardData() {
   // top 5 this week
   const weekTop5 = [...folderRows].sort((a, b) => b.weekSecs - a.weekSecs).slice(0, 5);
 
-  // last 30 stacked — top 6 projects by lifetime
-  const top6projects = folderRows.slice(0, 6).map(r => r.name);
+  // last 30 stacked — rank by activity in the last 30 days (not lifetime) and roll the rest into “Others”
+  const topProjectsByMonth = folderRows
+    .filter(r => r.monthSecs > 0)
+    .sort((a, b) => b.monthSecs - a.monthSecs);
+  const primaryProjects = topProjectsByMonth.slice(0, 6).map(r => r.name);
+
   const last30stacked: { [project: string]: { [date: string]: number } } = {};
-  for (const proj of top6projects) { last30stacked[proj] = {}; }
+  for (const proj of primaryProjects) { last30stacked[proj] = {}; }
+  last30stacked['Others'] = {};
+
   for (const [filePath, rec] of Object.entries(data.files)) {
     const project = getProjectFolder(filePath);
-    if (!last30stacked[project]) { continue; }
+    if (isJunk(project, filePath)) { continue; }
+
+    const bucket = primaryProjects.includes(project) ? project : 'Others';
     for (const date of last30Keys) {
       const s = rec.dailyTotal[date] || 0;
-      if (s) { last30stacked[project][date] = (last30stacked[project][date] || 0) + s; }
+      if (s) { last30stacked[bucket][date] = (last30stacked[bucket][date] || 0) + s; }
     }
   }
+
+  // Drop “Others” if it received no time to avoid a blank legend entry.
+  if (!Object.keys(last30stacked['Others']).length) { delete last30stacked['Others']; }
+  const top6projects = Object.keys(last30stacked);
 
   // language breakdown per project — file count by extension
   const langMap: { [project: string]: { [lang: string]: number } } = {};
