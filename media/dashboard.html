@@ -31,10 +31,25 @@
   <div data-section="liveStats">
     <div class="section-label">Live Stats</div>
     <div class="cards cards-4">
-      <div class="card"><div class="card-label">Today</div><div class="card-value accent-blue" id="todayTotal">--</div></div>
-      <div class="card"><div class="card-label">This Week</div><div class="card-value accent-green" id="weekTotal">--</div></div>
-      <div class="card"><div class="card-label">This Month</div><div class="card-value accent-yellow" id="monthTotal">--</div></div>
-      <div class="card"><div class="card-label">Lifetime</div><div class="card-value accent-purple" id="lifetimeTotal">--</div></div>
+      <div class="card">
+        <div class="card-label">Today</div>
+        <div class="card-value accent-blue" id="todayTotal">--</div>
+        <div class="card-delta" id="todayDelta"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">This Week</div>
+        <div class="card-value accent-green" id="weekTotal">--</div>
+        <div class="card-delta" id="weekDelta"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">This Month</div>
+        <div class="card-value accent-yellow" id="monthTotal">--</div>
+        <div class="card-delta" id="monthDelta"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Lifetime</div>
+        <div class="card-value accent-purple" id="lifetimeTotal">--</div>
+      </div>
     </div>
   </div>
 
@@ -120,8 +135,8 @@
           <tr>
             <th data-col="name">Project</th>
             <th data-col="todaySecs">Today</th>
-            <th data-col="weekSecs">This Week</th>
-            <th data-col="monthSecs">This Month</th>
+            <th data-col="last7Secs">Last 7 Days</th>
+            <th data-col="rolling30Secs">Last 30 Days</th>
             <th data-col="totalSecs">Lifetime</th>
             <th data-col="lastActive">Last Active</th>
           </tr>

@@ -38,6 +38,10 @@ body {
 }
 .card-label { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
 .card-value  { font-size: 20px; font-weight: 700; word-break: break-all; transition: color 0.4s; }
+.card-delta  { margin-top: 8px; font-size: 11px; color: #777; min-height: 16px; }
+.delta-up    { color: #98c379; }
+.delta-down  { color: #e06c75; }
+.delta-neutral { color: #777; }
 
 .accent-blue   { color: #61afef; }
 .accent-green  { color: #98c379; }

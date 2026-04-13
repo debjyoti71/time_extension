@@ -19,6 +19,7 @@
     const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
     return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
   }
+  function fmtDiff(secs) { return secs > 0 ? fmt(secs) : '0m'; }
   function hrs(secs) { return +(secs / 3600).toFixed(1); }
 
   const scaleOpts = function(unit) {
@@ -36,6 +37,29 @@
     charts[id] = new Chart(el, config);
   }
 
+  function setDelta(elId, current, prev, label) {
+    const el = document.getElementById(elId);
+    if (!el) { return; }
+    if (!prev && !current) {
+      el.textContent = 'No previous data';
+      el.className = 'card-delta delta-neutral';
+      return;
+    }
+    if (!prev) {
+      el.textContent = '▲ ' + fmtDiff(current) + ' vs ' + label + ' (0)';
+      el.className = 'card-delta delta-up';
+      return;
+    }
+    const diff = current - prev;
+    const pct = (diff / prev) * 100;
+    const arrow = diff >= 0 ? '▲' : '▼';
+    const sign = diff >= 0 ? '+' : '-';
+    const pctStr = Math.abs(pct).toFixed(1);
+    const diffStr = fmtDiff(Math.abs(diff));
+    el.textContent = `${arrow} ${sign}${diffStr} (${sign}${pctStr}%) vs ${label} (${fmt(prev)})`;
+    el.className = 'card-delta ' + (diff >= 0 ? 'delta-up' : 'delta-down');
+  }
+
   function updateCards() {
     document.getElementById('todayTotal').textContent     = fmt(data.todayTotal);
     document.getElementById('weekTotal').textContent      = fmt(data.weekTotal);
@@ -46,6 +70,9 @@
     document.getElementById('totalProjects').textContent  = String(data.totalProjects || 0);
     document.getElementById('mostActiveProj').textContent = data.mostActiveProj || '--';
     document.getElementById('lastUpdated').textContent    = 'Updated ' + new Date().toLocaleTimeString();
+    setDelta('todayDelta', data.todayTotal, data.yesterdayTotal, 'yesterday');
+    setDelta('weekDelta', data.weekTotal, data.prevWeekTotal, 'last week');
+    setDelta('monthDelta', data.monthTotal, data.prevMonthTotal, 'last month');
   }
 
   function drawBubbles() {
@@ -174,14 +201,18 @@
       data: { labels: l7dates, datasets: l7datasets },
       options: {
         responsive: true,
+        interaction: { mode: 'index', intersect: false, axis: 'x' },
         plugins: {
           legend: { labels: { color: TICK, boxWidth: 12, font: { size: 11 } } },
           tooltip: {
-            mode: 'index',
             filter: function(item) { return item.parsed.y > 0; },
             callbacks: {
-              title: function(ctx) { return ctx[0].label; },
+              title: function(ctx) {
+                if (!ctx || !ctx.length) { return ''; }
+                return ctx[0].label;
+              },
               beforeBody: function(ctx) {
+                if (!ctx || !ctx.length) { return 'No data'; }
                 const total = ctx.reduce(function(s, c) { return s + c.parsed.y; }, 0);
                 return 'Total: ' + fmt(Math.round(total * 3600));
               },
@@ -340,8 +371,8 @@
     const limited = (!showAll && !filterText) ? rows.slice(0, 10) : rows;
     document.getElementById('toggleRows').textContent = showAll ? 'Top 10' : ('Show All (' + rows.length + ')');
     document.getElementById('tableBody').innerHTML = limited.map(function(r) {
-      return '<tr><td>' + r.name + '</td><td>' + fmt(r.todaySecs) + '</td><td>' + fmt(r.weekSecs) +
-        '</td><td>' + fmt(r.monthSecs) + '</td><td class="lifetime">' + fmt(r.totalSecs) +
+      return '<tr><td>' + r.name + '</td><td>' + fmt(r.todaySecs) + '</td><td>' + fmt(r.last7Secs) +
+        '</td><td>' + fmt(r.rolling30Secs) + '</td><td class="lifetime">' + fmt(r.totalSecs) +
         '</td><td>' + (r.lastActive ? new Date(r.lastActive).toLocaleDateString() : '--') + '</td></tr>';
     }).join('');
   }

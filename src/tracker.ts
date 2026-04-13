@@ -44,7 +44,9 @@ function isIdle(): boolean {
 
 function getWorkspaceFallback(): string | undefined {
   const ws = vscode.workspace.workspaceFolders;
-  return ws && ws.length > 0 ? path.join(ws[0].uri.fsPath, '__workspace__') : undefined;
+  if (ws && ws.length > 0) { return path.join(ws[0].uri.fsPath, '__workspace__'); }
+  const pwd = process.env.PWD || process.cwd();
+  return pwd ? path.join(pwd, '__workspace__') : undefined;
 }
 
 function pauseCurrent(): void {

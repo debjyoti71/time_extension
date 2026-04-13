@@ -22,6 +22,12 @@ function getWorkspaceProject(filePath: string): string | undefined {
     }
   }
 
+  // Fallback: ask VS Code which workspace owns the file (helps when casing differs).
+  if (!best) {
+    const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
+    if (ws) { return ws.name; }
+  }
+
   return best?.name;
 }
 
@@ -29,7 +35,19 @@ function getProjectFolder(filePath: string): string {
   const workspaceName = getWorkspaceProject(filePath);
   if (workspaceName) { return workspaceName; }
 
-  const parts = filePath.replace(/\\/g, '/').split('/').filter(Boolean);
+  const normalized = filePath.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+
+  // Use current working directory ("pwd") to avoid sticking to a stale root when switching folders.
+  const pwd = (process.env.PWD || process.cwd() || '').replace(/\\/g, '/');
+  if (pwd && normalized.startsWith(pwd)) {
+    const rel = normalized.slice(pwd.length).split('/').filter(Boolean);
+    if (rel[0]) { return rel[0]; }
+    const base = pwd.split('/').filter(Boolean).pop();
+    if (base) { return base; }
+  }
+
+  // Heuristic folder names
   const rootIdx = parts.findIndex(p =>
     p.toLowerCase() === 'my_projects' ||
     p.toLowerCase() === 'projects' ||
@@ -64,11 +82,41 @@ function buildDashboardData() {
   const data = storage.load();
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = yesterday.toISOString().slice(0, 10);
+
+  const isoDates = (dates: Date[]): string[] => dates.map(d => d.toISOString().slice(0, 10));
+  const dayOfWeek = now.getDay(); // Sunday = 0
+  const startOfWeek = new Date(now);
+  startOfWeek.setHours(0, 0, 0, 0);
+  startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek); // move to Sunday
+  const thisWeekDates = isoDates(Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i); return d;
+  }));
+  const prevWeekStart = new Date(startOfWeek); prevWeekStart.setDate(startOfWeek.getDate() - 7);
+  const prevWeekDates = isoDates(Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(prevWeekStart); d.setDate(prevWeekStart.getDate() + i); return d;
+  }));
+  const prevWeekDateSet = new Set(prevWeekDates);
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const thisMonthDates = isoDates(Array.from({ length: daysInMonth }, (_, i) => {
+    const d = new Date(now); d.setDate(i + 1); return d;
+  }));
+  const prevMonthDate = new Date(now);
+  prevMonthDate.setDate(1);
+  prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+  const prevMonthDays = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1, 0).getDate();
+  const prevMonthDates = isoDates(Array.from({ length: prevMonthDays }, (_, i) => {
+    const d = new Date(prevMonthDate); d.setDate(i + 1); return d;
+  }));
+  const monthDateSet = new Set(thisMonthDates);
+  const prevMonthDateSet = new Set(prevMonthDates);
 
   const projectMap: {
     [project: string]: {
       totalSecs: number; todaySecs: number; weekSecs: number;
-      monthSecs: number; lastActive: number;
+      monthSecs: number; rolling30Secs: number; last7Secs: number; lastActive: number;
     }
   } = {};
 
@@ -103,25 +151,36 @@ function buildDashboardData() {
   let mostActiveProjSecs = 0;
   let mostActiveProj = '—';
   const hourTotals: number[] = new Array(24).fill(0); // seconds per hour bucket (last 30 days)
+  let yesterdayTotal = 0;
+  let prevWeekTotal = 0;
+  let prevMonthTotal = 0;
 
   for (const [filePath, rec] of Object.entries(data.files)) {
     const project = getProjectFolder(filePath);
     if (isJunk(project, filePath)) { continue; }
 
     const todaySecs = rec.dailyTotal[today] || 0;
+    const yesterdaySecs = rec.dailyTotal[yesterdayKey] || 0;
+    yesterdayTotal += yesterdaySecs;
 
     let weekSecs = 0;
-    for (const date of last7dates) {
-      const s = rec.dailyTotal[date] || 0;
-      weekSecs += s;
-      last7[date] += s;
-    }
+    for (const date of thisWeekDates) { weekSecs += rec.dailyTotal[date] || 0; }
+    for (const date of prevWeekDateSet) { prevWeekTotal += rec.dailyTotal[date] || 0; }
 
     let monthSecs = 0;
+    let last30WindowSecs = 0;
+    for (const date of monthDateSet) { monthSecs += rec.dailyTotal[date] || 0; }
+    for (const date of prevMonthDateSet) { prevMonthTotal += rec.dailyTotal[date] || 0; }
     for (const date of last30Keys) {
       const s = rec.dailyTotal[date] || 0;
-      monthSecs += s;
+      last30WindowSecs += s;
       last30[date] += s;
+    }
+    let last7SecsForProject = 0;
+    for (const date of last7dates) {
+      const s = rec.dailyTotal[date] || 0;
+      last7[date] += s;
+      last7SecsForProject += s;
     }
 
     for (const [date, secs] of Object.entries(rec.dailyTotal)) {
@@ -146,12 +205,14 @@ function buildDashboardData() {
     lifetimeSecs += rec.total;
 
     if (!projectMap[project]) {
-      projectMap[project] = { totalSecs: 0, todaySecs: 0, weekSecs: 0, monthSecs: 0, lastActive: 0 };
+      projectMap[project] = { totalSecs: 0, todaySecs: 0, weekSecs: 0, monthSecs: 0, rolling30Secs: 0, last7Secs: 0, lastActive: 0 };
     }
     projectMap[project].totalSecs += rec.total;
     projectMap[project].todaySecs += todaySecs;
     projectMap[project].weekSecs  += weekSecs;
     projectMap[project].monthSecs += monthSecs;
+    projectMap[project].rolling30Secs += last30WindowSecs;
+    projectMap[project].last7Secs += last7SecsForProject;
     projectMap[project].lastActive = Math.max(projectMap[project].lastActive, rec.lastActive);
   }
 
@@ -173,7 +234,9 @@ function buildDashboardData() {
   for (const [name, v] of Object.entries(projectMap)) { dirTotals[name] = v.totalSecs; }
 
   // last 7 stacked — projects that have weekSecs > 0
-  const last7projects = folderRows.filter(r => r.weekSecs > 0).map(r => r.name);
+  const last7projects = folderRows
+    .filter(r => (projectMap[r.name]?.last7Secs || 0) > 0)
+    .map(r => r.name);
   const last7stacked: { [project: string]: { [date: string]: number } } = {};
   for (const proj of last7projects) { last7stacked[proj] = {}; }
   for (const [filePath, rec] of Object.entries(data.files)) {
@@ -189,10 +252,11 @@ function buildDashboardData() {
   const weekTop5 = [...folderRows].sort((a, b) => b.weekSecs - a.weekSecs).slice(0, 5);
 
   // last 30 stacked — rank by activity in the last 30 days (not lifetime) and roll the rest into “Others”
-  const topProjectsByMonth = folderRows
-    .filter(r => r.monthSecs > 0)
-    .sort((a, b) => b.monthSecs - a.monthSecs);
-  const primaryProjects = topProjectsByMonth.slice(0, 6).map(r => r.name);
+  const topProjectsByRolling30 = folderRows
+    .map(r => ({ name: r.name, rolling: projectMap[r.name]?.rolling30Secs || 0 }))
+    .filter(r => r.rolling > 0)
+    .sort((a, b) => b.rolling - a.rolling);
+  const primaryProjects = topProjectsByRolling30.slice(0, 6).map(r => r.name);
 
   const last30stacked: { [project: string]: { [date: string]: number } } = {};
   for (const proj of primaryProjects) { last30stacked[proj] = {}; }
@@ -240,6 +304,7 @@ function buildDashboardData() {
     last30, last30stacked, top6projects,
     last6months, hourBuckets, weekTop5,
     todayTotal, weekTotal, monthTotal, lifetimeSecs,
+    yesterdayTotal, prevWeekTotal, prevMonthTotal,
     activeDays, avgPerDay, totalProjects, mostActiveProj
   };
 }
