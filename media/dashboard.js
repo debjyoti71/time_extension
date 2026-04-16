@@ -463,4 +463,11 @@
     });
   });
 
+  var shareCardBtn = document.getElementById('shareCardBtn');
+  if (shareCardBtn) {
+    shareCardBtn.addEventListener('click', function() {
+      vscode.postMessage({ command: 'shareCard' });
+    });
+  }
+
 })();

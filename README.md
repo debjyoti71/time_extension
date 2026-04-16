@@ -45,6 +45,13 @@ Data model (per file):
 
 ---
 
+## Snapshots (Last 7 / Last 30 / Custom)
+Create shareable snapshots for **one repo** or **multiple repos**:
+- Command Palette → **Time Tracker: Save Snapshot (7/30/Custom, Multi-Repo)**
+- Snapshots are saved in `~/.vscode-time-tracker/snapshots/` as both `.json` and a readable `.md` summary.
+
+---
+
 ## Privacy & data control
 - Everything is local. Delete the folder `~/.vscode-time-tracker/` to remove all data.
 - No network calls, no telemetry, no accounts.

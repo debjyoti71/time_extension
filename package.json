@@ -2,7 +2,7 @@
   "name": "dev-timekeeper",
   "displayName": "Dev Timekeeper",
   "description": "Track coding time per file and directory, locally",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "repository": {
     "type": "git",
     "url": "https://github.com/debjyoti-ghosh/time-tracker.git"
@@ -23,6 +23,10 @@
       {
         "command": "timetracker.showDashboard",
         "title": "Time Tracker: Show Dashboard"
+      },
+      {
+        "command": "timetracker.shareCard",
+        "title": "Time Tracker: Generate Share Card"
       },
       {
         "command": "timetracker.reset",

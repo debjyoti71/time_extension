@@ -90,6 +90,20 @@ canvas { max-height: 220px; }
 .menu-item input { accent-color: #61afef; cursor: pointer; }
 [data-section].hidden { display: none; }
 
+/* Header action buttons */
+.action-btn {
+  background: #1e1e22;
+  color: #61afef;
+  border: 1px solid #2a2a2e;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.action-btn:hover { border-color: #61afef; }
+.action-btn.action-btn-secondary { color: #98c379; }
+
 /* Table */
 .table-box {
   background: #1a1a1e;
