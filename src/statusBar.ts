@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { getElapsedToday } from './tracker';
-import { onTick } from './tracker';
+import { getElapsedToday, onTick, getCurrentProject } from './tracker';
 
 let statusBarItem: vscode.StatusBarItem;
 let updateTimer: NodeJS.Timeout | undefined;
@@ -13,8 +12,11 @@ function formatTime(seconds: number): string {
 
 function update(): void {
   const secs = getElapsedToday();
+  const proj = getCurrentProject();
   statusBarItem.text = `⏱ Today: ${formatTime(secs)}`;
-  statusBarItem.tooltip = `Time Tracker — ${secs}s total today. Click to open dashboard`;
+  statusBarItem.tooltip = proj
+    ? `Tracking: ${proj} — ${formatTime(secs)} today. Click to open dashboard`
+    : `Time Tracker — ${formatTime(secs)} today. Click to open dashboard`;
 }
 
 export function activate(context: vscode.ExtensionContext): void {

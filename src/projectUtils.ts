@@ -1,4 +1,18 @@
 import * as vscode from 'vscode';
+import * as storage from './storage';
+
+let cachedData: storage.TrackingData | null = null;
+let cacheTime = 0;
+const CACHE_TTL = 5000; // 5 seconds
+
+function getCachedData(): storage.TrackingData {
+  const now = Date.now();
+  if (!cachedData || now - cacheTime > CACHE_TTL) {
+    cachedData = storage.load();
+    cacheTime = now;
+  }
+  return cachedData;
+}
 
 function getWorkspaceProject(filePath: string): string | undefined {
   const folders = vscode.workspace.workspaceFolders;
@@ -16,7 +30,6 @@ function getWorkspaceProject(filePath: string): string | undefined {
     }
   }
 
-  // Fallback: ask VS Code which workspace owns the file (helps when casing differs).
   if (!best) {
     const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
     if (ws) { return ws.name; }
@@ -26,22 +39,18 @@ function getWorkspaceProject(filePath: string): string | undefined {
 }
 
 export function getProjectFolder(filePath: string): string {
+  // 1. Use the project name stored at tracking time (most reliable)
+  const stored = getCachedData().files[filePath]?.project;
+  if (stored) { return stored; }
+
+  // 2. Match against currently open workspace folders
   const workspaceName = getWorkspaceProject(filePath);
   if (workspaceName) { return workspaceName; }
 
+  // 3. Legacy fallback: heuristic from path segments only (no cwd/PWD)
   const normalized = filePath.replace(/\\/g, '/');
   const parts = normalized.split('/').filter(Boolean);
 
-  // Use current working directory ("pwd") to avoid sticking to a stale root when switching folders.
-  const pwd = (process.env.PWD || process.cwd() || '').replace(/\\/g, '/');
-  if (pwd && normalized.startsWith(pwd)) {
-    const rel = normalized.slice(pwd.length).split('/').filter(Boolean);
-    if (rel[0]) { return rel[0]; }
-    const base = pwd.split('/').filter(Boolean).pop();
-    if (base) { return base; }
-  }
-
-  // Heuristic folder names
   const rootIdx = parts.findIndex(p =>
     p.toLowerCase() === 'my_projects' ||
     p.toLowerCase() === 'projects' ||
@@ -50,10 +59,8 @@ export function getProjectFolder(filePath: string): string {
   );
   if (rootIdx !== -1 && parts[rootIdx + 1]) { return parts[rootIdx + 1]; }
 
-  // If path is drive-rooted like "E:/proj/src/file", pick the first folder after the drive.
   if (parts.length >= 2 && /^[a-z]:$/i.test(parts[0])) { return parts[1]; }
 
-  // Fallback: parent directory, else the path itself.
   if (parts.length >= 2) { return parts[parts.length - 2]; }
   return parts[0] || filePath;
 }

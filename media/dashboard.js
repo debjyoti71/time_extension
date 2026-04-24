@@ -60,6 +60,15 @@
     el.className = 'card-delta ' + (diff >= 0 ? 'delta-up' : 'delta-down');
   }
 
+  function updateDevBar() {
+    var repo = document.getElementById('devRepo');
+    var file = document.getElementById('devFile');
+    var session = document.getElementById('devSession');
+    if (repo) { repo.textContent = data.currentProject || '(none — no workspace folder)'; }
+    if (file) { file.textContent = data.currentFile || '(no active file)'; }
+    if (session) { session.textContent = fmt(data.todayTotal); }
+  }
+
   function updateCards() {
     document.getElementById('todayTotal').textContent     = fmt(data.todayTotal);
     document.getElementById('weekTotal').textContent      = fmt(data.weekTotal);
@@ -73,6 +82,7 @@
     setDelta('todayDelta', data.todayTotal, data.yesterdayTotal, 'yesterday');
     setDelta('weekDelta', data.weekTotal, data.prevWeekTotal, 'last week');
     setDelta('monthDelta', data.monthTotal, data.prevMonthTotal, 'last month');
+    updateDevBar();
   }
 
   function drawBubbles() {
@@ -430,6 +440,9 @@
   // 3-dot menu -- section visibility persisted to disk via extension
   var state = (typeof __settings !== 'undefined' && __settings) || {};
   var hidden = state.hiddenSections || {};
+  // devBar is always off on load — never persisted
+  hidden['devBar'] = true;
+  delete state.hiddenSections?.devBar;
 
   function applySections() {
     document.querySelectorAll('[data-section]').forEach(function(el) {
@@ -455,9 +468,14 @@
   document.querySelectorAll('.menu-item input').forEach(function(cb) {
     cb.addEventListener('change', function() {
       var s = cb.getAttribute('data-section');
+      if (s === 'devBar') {
+        // devBar: toggle in-memory only, never save to disk
+        hidden[s] = !cb.checked;
+        applySections();
+        return;
+      }
       if (cb.checked) { delete hidden[s]; } else { hidden[s] = true; }
       state.hiddenSections = hidden;
-      // persist to disk via extension
       vscode.postMessage({ command: 'saveSettings', settings: state });
       applySections();
     });

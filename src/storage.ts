@@ -8,6 +8,7 @@ export interface FileRecord {
   // seconds spent in each hour of the day (per date)
   dailyHours: { [date: string]: { [hour: number]: number } };
   lastActive: number;
+  project?: string;  // workspace/repo root name, stored at tracking time
 }
 
 export interface TrackingData {
@@ -96,7 +97,7 @@ export function save(data: TrackingData): void {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data), 'utf8');
 }
 
-export function addTime(filePath: string, seconds: number): void {
+export function addTime(filePath: string, seconds: number, project?: string): void {
   const data = load();
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
@@ -111,6 +112,7 @@ export function addTime(filePath: string, seconds: number): void {
   if (!rec.dailyHours[today]) { rec.dailyHours[today] = {}; }
   rec.dailyHours[today][hour] = (rec.dailyHours[today][hour] || 0) + seconds;
   rec.lastActive = Date.now();
+  if (project) { rec.project = project; }
   save(data);
 }
 

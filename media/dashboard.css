@@ -88,7 +88,33 @@ canvas { max-height: 220px; }
 .menu-item { display: flex; align-items: center; gap: 8px; padding: 6px 14px; color: #aaa; font-size: 12px; cursor: pointer; }
 .menu-item:hover { background: #222228; color: #fff; }
 .menu-item input { accent-color: #61afef; cursor: pointer; }
+.menu-divider { border-top: 1px solid #2a2a2e; margin: 6px 0; }
 [data-section].hidden { display: none; }
+
+/* Dev bar */
+.dev-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #0d1a0d;
+  border: 1px solid #1a3a1a;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: #7ec87e;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.dev-bar-label {
+  background: #1a3a1a;
+  color: #98c379;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.dev-bar strong { color: #98c379; }
 
 /* Header action buttons */
 .action-btn {

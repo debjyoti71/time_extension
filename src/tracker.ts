@@ -21,6 +21,7 @@ function fireTick(): void {
 }
 
 let currentFile: string | undefined;
+let currentProject: string | undefined;
 let sessionStart: number | undefined;
 let flushTimer: NodeJS.Timeout | undefined;
 let heartbeatProc: ChildProcess | undefined;
@@ -58,7 +59,7 @@ function pauseCurrent(): void {
 
 function flushPending(): void {
   if (currentFile && pendingSeconds > 0) {
-    storage.addTime(currentFile, pendingSeconds);
+    storage.addTime(currentFile, pendingSeconds, currentProject);
     pendingSeconds = 0;
   }
 }
@@ -99,6 +100,11 @@ export function activate(context: vscode.ExtensionContext): void {
     pauseCurrent();
     flushPending();
     currentFile = editor?.document.uri.fsPath || getWorkspaceFallback();
+    if (currentFile) {
+      const uri = editor?.document.uri ?? (currentFile ? vscode.Uri.file(currentFile) : undefined);
+      const wsFolder = uri ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
+      currentProject = wsFolder?.name ?? vscode.workspace.workspaceFolders?.[0]?.name;
+    }
     if (currentFile && !isIdle()) { resumeCurrent(); }
   };
 
@@ -146,6 +152,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   onFileChange(vscode.window.activeTextEditor);
 }
+
+export function getCurrentProject(): string | undefined { return currentProject; }
+export function getCurrentFile(): string | undefined { return currentFile; }
 
 export function deactivate(): void {
   pauseCurrent();

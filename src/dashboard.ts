@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as storage from './storage';
-import { onTick } from './tracker';
+import { onTick, getCurrentProject, getCurrentFile } from './tracker';
 import { getProjectFolder, isJunk } from './projectUtils';
 
 let panel: vscode.WebviewPanel | undefined;
@@ -84,13 +84,19 @@ function buildDashboardData() {
   let prevWeekTotal = 0;
   let prevMonthTotal = 0;
 
-  for (const [filePath, rec] of Object.entries(data.files)) {
+  // pre-compute project per file once — avoids repeated getProjectFolder calls in later loops
+  const fileProjectMap = new Map<string, string>();
+  for (const filePath of Object.keys(data.files)) {
     const project = getProjectFolder(filePath);
-    if (isJunk(project, filePath)) { continue; }
+    if (!isJunk(project, filePath)) { fileProjectMap.set(filePath, project); }
+  }
+
+  for (const [filePath, rec] of Object.entries(data.files)) {
+    const project = fileProjectMap.get(filePath);
+    if (!project) { continue; }
 
     const todaySecs = rec.dailyTotal[today] || 0;
-    const yesterdaySecs = rec.dailyTotal[yesterdayKey] || 0;
-    yesterdayTotal += yesterdaySecs;
+    yesterdayTotal += rec.dailyTotal[yesterdayKey] || 0;
 
     let weekSecs = 0;
     for (const date of thisWeekDates) { weekSecs += rec.dailyTotal[date] || 0; }
@@ -169,8 +175,8 @@ function buildDashboardData() {
   const last7stacked: { [project: string]: { [date: string]: number } } = {};
   for (const proj of last7projects) { last7stacked[proj] = {}; }
   for (const [filePath, rec] of Object.entries(data.files)) {
-    const project = getProjectFolder(filePath);
-    if (!last7stacked[project]) { continue; }
+    const project = fileProjectMap.get(filePath);
+    if (!project || !last7stacked[project]) { continue; }
     for (const date of last7dates) {
       const s = rec.dailyTotal[date] || 0;
       if (s) { last7stacked[project][date] = (last7stacked[project][date] || 0) + s; }
@@ -192,8 +198,8 @@ function buildDashboardData() {
   last30stacked['Others'] = {};
 
   for (const [filePath, rec] of Object.entries(data.files)) {
-    const project = getProjectFolder(filePath);
-    if (isJunk(project, filePath)) { continue; }
+    const project = fileProjectMap.get(filePath);
+    if (!project) { continue; }
 
     const bucket = primaryProjects.includes(project) ? project : 'Others';
     for (const date of last30Keys) {
@@ -208,9 +214,7 @@ function buildDashboardData() {
 
   // language breakdown per project — file count by extension
   const langMap: { [project: string]: { [lang: string]: number } } = {};
-  for (const filePath of Object.keys(data.files)) {
-    const project = getProjectFolder(filePath);
-    if (isJunk(project, filePath)) { continue; }
+  for (const [filePath, project] of fileProjectMap) {
     const ext = filePath.split('.').pop()?.toLowerCase() || 'other';
     const lang = ({'ts':'TypeScript','tsx':'TypeScript','js':'JavaScript','jsx':'JavaScript',
       'py':'Python','html':'HTML','css':'CSS','scss':'CSS','json':'JSON',
@@ -234,7 +238,13 @@ function buildDashboardData() {
     last6months, hourBuckets, weekTop5,
     todayTotal, weekTotal, monthTotal, lifetimeSecs,
     yesterdayTotal, prevWeekTotal, prevMonthTotal,
-    activeDays, avgPerDay, totalProjects, mostActiveProj
+    activeDays, avgPerDay, totalProjects, mostActiveProj,
+    currentProject: getCurrentProject() ?? null,
+    currentFile: (() => {
+      const f = getCurrentFile() ?? vscode.window.activeTextEditor?.document.uri.fsPath;
+      if (!f || f.endsWith('__workspace__')) { return null; }
+      return path.basename(f);
+    })()
   };
 }
 
@@ -279,10 +289,11 @@ function refreshPanel(context: vscode.ExtensionContext): void {
   const cssUri      = panel.webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'media', 'dashboard.css')));
   const jsUri       = panel.webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'media', 'dashboard.js')));
 
-  // load persisted settings
+  // load persisted settings — strip devBar so it never starts visible
   const settingsPath = path.join(require('os').homedir(), '.vscode-time-tracker', 'settings.json');
   let settings: { hiddenSections?: { [k: string]: boolean } } = {};
   try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch { }
+  if (settings.hiddenSections) { delete settings.hiddenSections['devBar']; }
 
   let html = fs.readFileSync(htmlPath, 'utf8');
   html = html
