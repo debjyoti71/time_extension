@@ -437,12 +437,10 @@
     el.style.color = '#98c379';
     setTimeout(function() { el.style.color = ''; }, 500);
   });
-  // 3-dot menu -- section visibility persisted to disk via extension
+  // devBar is always off on load — never persisted
   var state = (typeof __settings !== 'undefined' && __settings) || {};
   var hidden = state.hiddenSections || {};
-  // devBar is always off on load — never persisted
   hidden['devBar'] = true;
-  delete state.hiddenSections?.devBar;
 
   function applySections() {
     document.querySelectorAll('[data-section]').forEach(function(el) {
