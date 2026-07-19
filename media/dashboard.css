@@ -67,6 +67,7 @@ body {
 .chart-box.full-width { width: 100%; }
 .chart-title { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
 canvas { max-height: 220px; }
+#heatmapChart { max-height: none; }
 .treemap-box { height: 500px; position: relative; }
 .treemap-box canvas { max-height: none; width: 100% !important; height: 100% !important; }
 

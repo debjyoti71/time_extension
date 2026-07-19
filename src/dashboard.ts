@@ -215,6 +215,7 @@ function buildDashboardData() {
   // language breakdown per project — file count by extension
   const langMap: { [project: string]: { [lang: string]: number } } = {};
   for (const [filePath, project] of fileProjectMap) {
+    if (filePath.includes('__workspace__')) { continue; }
     const ext = filePath.split('.').pop()?.toLowerCase() || 'other';
     const lang = ({'ts':'TypeScript','tsx':'TypeScript','js':'JavaScript','jsx':'JavaScript',
       'py':'Python','html':'HTML','css':'CSS','scss':'CSS','json':'JSON',

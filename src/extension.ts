@@ -15,16 +15,15 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('timetracker.shareCard', () => snapshots.generateShareCard(context)),
     vscode.commands.registerCommand('timetracker.reset', async () => {
-      const ok = await vscode.window.showWarningMessage(
-        'Reset all tracked time data? This deletes your local data.json.',
-        { modal: true },
-        'Reset'
-      );
-      if (ok === 'Reset') {
-        storage.resetAll();
-        statusBar.refresh();
-        vscode.window.showInformationMessage('Time Tracker data reset.');
-      }
+      const confirm = await vscode.window.showInputBox({
+        prompt: 'Type RESET to permanently delete all tracked time data',
+        placeHolder: 'RESET',
+        validateInput: v => (v === 'RESET' ? undefined : 'Type exactly RESET to confirm')
+      });
+      if (confirm !== 'RESET') { return; }
+      storage.resetAll();
+      statusBar.refresh();
+      vscode.window.showInformationMessage('Time Tracker data reset.');
     })
   );
 }

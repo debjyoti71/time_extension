@@ -94,7 +94,12 @@ export function load(): TrackingData {
 
 export function save(data: TrackingData): void {
   ensureDir();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data), 'utf8');
+  const tmp = DATA_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
+  if (fs.existsSync(DATA_FILE)) {
+    fs.copyFileSync(DATA_FILE, DATA_FILE + '.backup');
+  }
+  fs.renameSync(tmp, DATA_FILE);
 }
 
 export function addTime(filePath: string, seconds: number, project?: string): void {

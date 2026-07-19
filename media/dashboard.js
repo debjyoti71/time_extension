@@ -174,20 +174,109 @@
 
     // 2. Donut share
     const pie8 = Object.entries(data.dirTotals).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
+    var pieColors = C.slice(0, pie8.length);
     makeChart('pieChart', {
       type: 'doughnut',
       data: {
         labels: pie8.map(function(x) { return x[0]; }),
-        datasets: [{ data: pie8.map(function(x) { return hrs(x[1]); }), backgroundColor: C, borderWidth: 0 }]
+        datasets: [{
+          data: pie8.map(function(x) { return hrs(x[1]); }),
+          backgroundColor: pieColors,
+          hoverBackgroundColor: pieColors,
+          borderWidth: 2,
+          borderColor: '#0e0e10',
+          hoverOffset: 6
+        }]
       },
       options: {
         responsive: true,
+        cutout: '62%',
         plugins: {
-          legend: { position: 'right', labels: { color: TICK, boxWidth: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed + 'h'; } } }
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        onHover: function(evt, elements) {
+          var canvas = document.getElementById('pieChart');
+          canvas.style.cursor = elements.length ? 'pointer' : 'default';
+          var legendItems = document.querySelectorAll('.pie-legend-item');
+          legendItems.forEach(function(el, i) {
+            el.style.opacity = (!elements.length || elements[0].index === i) ? '1' : '0.35';
+          });
+          // update center label
+          var centerLabel = document.getElementById('pieCenterLabel');
+          var centerValue = document.getElementById('pieCenterValue');
+          if (elements.length) {
+            var idx = elements[0].index;
+            centerLabel.textContent = pie8[idx][0];
+            centerValue.textContent = fmt(pie8[idx][1]);
+          } else {
+            centerLabel.textContent = 'Projects';
+            centerValue.textContent = fmt(data.lifetimeSecs);
+          }
         }
-      }
+      },
+      plugins: [{
+        id: 'centerText',
+        afterDraw: function(chart) {
+          var ctx = chart.ctx;
+          var cx = chart.chartArea ? (chart.chartArea.left + chart.chartArea.right) / 2 : chart.width / 2;
+          var cy = chart.chartArea ? (chart.chartArea.top + chart.chartArea.bottom) / 2 : chart.height / 2;
+          var label = document.getElementById('pieCenterLabel');
+          var value = document.getElementById('pieCenterValue');
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '700 15px Segoe UI, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(value ? value.textContent : '', cx, cy - 8);
+          ctx.font = '500 10px Segoe UI, sans-serif';
+          ctx.fillStyle = '#555';
+          ctx.fillText(label ? label.textContent : '', cx, cy + 10);
+          ctx.restore();
+        }
+      }]
     });
+    // build custom legend
+    var pieLegend = document.getElementById('pieLegend');
+    if (pieLegend) {
+      pieLegend.innerHTML = pie8.map(function(x, i) {
+        return '<div class="pie-legend-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;transition:opacity 0.15s;">'
+          + '<span style="width:10px;height:10px;border-radius:50%;background:'+C[i]+';flex-shrink:0;"></span>'
+          + '<span style="font-size:11px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+x[0]+'</span>'
+          + '<span style="font-size:11px;color:'+C[i]+';margin-left:auto;padding-left:8px;">'+fmt(x[1])+'</span>'
+          + '</div>';
+      }).join('');
+      pieLegend.querySelectorAll('.pie-legend-item').forEach(function(el) {
+        el.addEventListener('mouseenter', function() {
+          var idx = +el.dataset.idx;
+          var chart = charts['pieChart'];
+          if (!chart) { return; }
+          chart.setDatasetVisibility(0, true);
+          var meta = chart.getDatasetMeta(0);
+          meta.data.forEach(function(arc, i) { arc.options.backgroundColor = i === idx ? C[i] : C[i] + '44'; });
+          chart.update('none');
+          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l, i) {
+            l.style.opacity = i === idx ? '1' : '0.35';
+          });
+          var centerLabel = document.getElementById('pieCenterLabel');
+          var centerValue = document.getElementById('pieCenterValue');
+          if (centerLabel) { centerLabel.textContent = pie8[idx][0]; }
+          if (centerValue) { centerValue.textContent = fmt(pie8[idx][1]); }
+        });
+        el.addEventListener('mouseleave', function() {
+          var chart = charts['pieChart'];
+          if (!chart) { return; }
+          var meta = chart.getDatasetMeta(0);
+          meta.data.forEach(function(arc, i) { arc.options.backgroundColor = C[i]; });
+          chart.update('none');
+          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l) { l.style.opacity = '1'; });
+          var centerLabel = document.getElementById('pieCenterLabel');
+          var centerValue = document.getElementById('pieCenterValue');
+          if (centerLabel) { centerLabel.textContent = 'Projects'; }
+          if (centerValue) { centerValue.textContent = fmt(data.lifetimeSecs); }
+        });
+      });
+    }
 
     // 3. Last 7 days stacked area by project
     const l7dates = data.last7dates;
@@ -267,13 +356,15 @@
             label: proj,
             data: l30dates.map(function(d) { return hrs(((data.last30stacked[proj] || {})[d]) || 0); }),
             backgroundColor: STACK[i % STACK.length],
-            borderRadius: 2,
-            barPercentage: 0.9
+            borderRadius: 0,
+            barPercentage: 0.92,
+            categoryPercentage: 0.98
           };
         })
       },
       options: {
         responsive: true,
+        aspectRatio: 4,
         plugins: {
           legend: { labels: { color: TICK, boxWidth: 12, font: { size: 11 } } },
           tooltip: {
@@ -289,8 +380,23 @@
           }
         },
         scales: {
-          x: { stacked: true, ticks: { color: TICK, maxTicksLimit: 10, maxRotation: 0 }, grid: { display: false } },
-          y: { stacked: true, ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } }
+          x: {
+            stacked: true,
+            ticks: {
+              color: TICK,
+              maxRotation: 0,
+              maxTicksLimit: 8,
+              autoSkip: true
+            },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            stacked: true,
+            ticks: { color: TICK, callback: function(v) { return v + 'h'; } },
+            grid: { color: GRID, drawTicks: false },
+            border: { display: false, dash: [4, 4] }
+          }
         }
       }
     });
