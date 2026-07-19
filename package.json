@@ -37,6 +37,8 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "version:from-git": "node scripts/sync-version-from-git.mjs",
+    "package:vsix": "npm run version:from-git && npm run compile && npx --yes @vscode/vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
