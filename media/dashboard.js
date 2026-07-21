@@ -215,26 +215,7 @@
           }
         }
       },
-      plugins: [{
-        id: 'centerText',
-        afterDraw: function(chart) {
-          var ctx = chart.ctx;
-          var cx = chart.chartArea ? (chart.chartArea.left + chart.chartArea.right) / 2 : chart.width / 2;
-          var cy = chart.chartArea ? (chart.chartArea.top + chart.chartArea.bottom) / 2 : chart.height / 2;
-          var label = document.getElementById('pieCenterLabel');
-          var value = document.getElementById('pieCenterValue');
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = '700 15px Segoe UI, sans-serif';
-          ctx.fillStyle = '#ffffff';
-          ctx.fillText(value ? value.textContent : '', cx, cy - 8);
-          ctx.font = '500 10px Segoe UI, sans-serif';
-          ctx.fillStyle = '#555';
-          ctx.fillText(label ? label.textContent : '', cx, cy + 10);
-          ctx.restore();
-        }
-      }]
+      plugins: []
     });
     // build custom legend
     var pieLegend = document.getElementById('pieLegend');
