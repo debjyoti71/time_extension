@@ -1,0 +1,204 @@
+:root {
+  --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif;
+  --bg-main: var(--vscode-editor-background, #1e1e1e);
+  --bg-panel: var(--vscode-sideBar-background, #252526);
+  --fg: var(--vscode-editor-foreground, #cccccc);
+  --fg-dim: var(--vscode-descriptionForeground, #717171);
+  --border: var(--vscode-panel-border, #3c3c3c);
+  --accent: var(--vscode-button-background, #0e639c);
+  --accent-hover: var(--vscode-button-hoverBackground, #1177bb);
+  --bg-input: var(--vscode-input-background, #3c3c3c);
+  --fg-input: var(--vscode-input-foreground, #cccccc);
+  --border-input: var(--vscode-input-border, #3c3c3c);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  color: var(--fg);
+  background-color: var(--bg-main);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.builder {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+/* Sidebar Controls */
+.controls {
+  width: 300px;
+  min-width: 300px;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.controls-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.controls-icon { font-size: 16px; }
+
+.section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section:last-child { border-bottom: none; }
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  margin-bottom: 10px;
+}
+.section-hint {
+  font-weight: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Layout Picker */
+.layout-picker {
+  display: flex;
+  gap: 8px;
+}
+.layout-btn {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 4px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: 0.2s;
+}
+.layout-btn:hover {
+  background: var(--bg-input);
+  color: var(--fg);
+}
+.layout-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(14, 99, 156, 0.1);
+}
+.layout-thumb {
+  width: 100%;
+  height: 36px;
+  border-radius: 2px;
+}
+.a-thumb { background: linear-gradient(135deg, #0a0a14, #1a1a24); border: 1px solid #c678dd55; }
+.b-thumb { background: #ffffff; border: 1px solid #ddd; }
+.c-thumb { background: linear-gradient(135deg, #00d4ff, #7c3aed); }
+
+/* Radios */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.radio-item input { margin: 0; cursor: pointer; }
+
+/* Selects */
+.select {
+  width: 100%;
+  background-color: var(--bg-input);
+  color: var(--fg-input);
+  border: 1px solid var(--border-input);
+  padding: 6px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.select:focus { border-color: var(--accent); }
+
+/* Slots */
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.slot-num {
+  font-size: 11px;
+  color: var(--fg-dim);
+  width: 12px;
+}
+
+/* Download */
+.download-section {
+  padding-top: 24px;
+  padding-bottom: 40px;
+}
+.download-btn {
+  width: 100%;
+  background-color: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.download-btn:hover { background-color: var(--accent-hover); }
+.status-text {
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-align: center;
+  margin-top: 10px;
+  min-height: 16px;
+}
+
+/* Preview Area */
+.preview-panel {
+  flex: 1;
+  background-color: #0e0e0e; /* distinct from UI */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow: auto;
+  position: relative;
+  background-image: 
+    linear-gradient(45deg, #181818 25%, transparent 25%), 
+    linear-gradient(-45deg, #181818 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #181818 75%),
+    linear-gradient(-45deg, transparent 75%, #181818 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+canvas {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transition: opacity 0.2s;
+}

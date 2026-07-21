@@ -3,3 +3,4 @@ out/
 *.vsix
 *.js.map
 .vscode-test/
+card-lab/

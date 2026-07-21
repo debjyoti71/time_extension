@@ -2,7 +2,7 @@
   "name": "dev-timekeeper",
   "displayName": "Dev Timekeeper",
   "description": "Track coding time per file and directory, locally",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "repository": {
     "type": "git",
     "url": "https://github.com/debjyoti-ghosh/time-tracker.git"
