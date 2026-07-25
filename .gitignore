@@ -4,3 +4,9 @@ out/
 *.js.map
 .vscode-test/
 card-lab/
+.claude
+.agents
+.cursor
+.gemini
+.github
+.codex

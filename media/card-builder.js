@@ -1,11 +1,11 @@
 (function() {
   const vscode = acquireVsCodeApi();
   const dataEl = document.getElementById('app-data');
-  const D = JSON.parse(dataEl.dataset.json);
+  const D = JSON.parse(dataEl.dataset.json || '{}');
 
   // --- Formatter Helper ---
   function fmt(secs) {
-    const s = Math.max(0, Math.floor(secs));
+    const s = Math.max(0, Math.floor(secs || 0));
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
@@ -28,41 +28,59 @@
   // --- State ---
   let state = {
     layout: 'A',
-    range: 'lifetime',
+    range: 'lifetime', // 'lifetime', 'l30', 'l7', 'month'
     chart: 'bar',
     bottom: 'projects',
     funFact: 'coffee',
     slots: ['totalTime', 'dailyAvg', 'streak', 'peakHours'],
-    selectedProjects: Object.keys(D.projects) // All by default
+    selectedProjects: Object.keys(D.projects || {}) // All by default
   };
 
   let computed = null; // Will hold the aggregated data
 
   // --- Aggregation Engine ---
   function computeData() {
-    const l30set = new Set(D.l30dates);
+    const allL30 = D.l30dates || [];
+    const l30set = new Set(allL30);
+    const l7dates = allL30.slice(-7);
+    const l7set = new Set(l7dates);
+
+    const latestDate = allL30[allL30.length - 1] || new Date().toISOString().slice(0, 10);
+    const monthPrefix = latestDate.slice(0, 7);
+    const monthDates = allL30.filter(d => d.startsWith(monthPrefix));
+    const monthSet = new Set(monthDates);
     
     let lifeTotalSecs = 0;
     let l30TotalSecs = 0;
+    let l7TotalSecs = 0;
+    let monthTotalSecs = 0;
     
     const lifeDays = {};
     const l30Days = {};
+    const l7Days = {};
+    const monthDays = {};
     const hourTotals = new Array(24).fill(0);
     
-    D.l30dates.forEach(d => { l30Days[d] = 0; });
+    allL30.forEach(d => { l30Days[d] = 0; });
+    l7dates.forEach(d => { l7Days[d] = 0; });
+    monthDates.forEach(d => { monthDays[d] = 0; });
 
     const topLife = {};
     const topL30 = {};
+    const topL7 = {};
+    const topMonth = {};
 
     state.selectedProjects.forEach(proj => {
-      const p = D.projects[proj];
+      const p = (D.projects || {})[proj];
       if (!p) return;
 
       topLife[proj] = 0;
       topL30[proj] = 0;
+      topL7[proj] = 0;
+      topMonth[proj] = 0;
 
       // Dates
-      for (const [dateStr, secs] of Object.entries(p.dates)) {
+      for (const [dateStr, secs] of Object.entries(p.dates || {})) {
         lifeDays[dateStr] = (lifeDays[dateStr] || 0) + secs;
         lifeTotalSecs += secs;
         topLife[proj] += secs;
@@ -72,21 +90,39 @@
           l30TotalSecs += secs;
           topL30[proj] += secs;
         }
+
+        if (l7set.has(dateStr)) {
+          l7Days[dateStr] = (l7Days[dateStr] || 0) + secs;
+          l7TotalSecs += secs;
+          topL7[proj] += secs;
+        }
+
+        if (monthSet.has(dateStr)) {
+          monthDays[dateStr] = (monthDays[dateStr] || 0) + secs;
+          monthTotalSecs += secs;
+          topMonth[proj] += secs;
+        }
       }
 
       // Peak Hours
-      for (const [hStr, secs] of Object.entries(p.hours)) {
+      for (const [hStr, secs] of Object.entries(p.hours || {})) {
         const h = parseInt(hStr, 10);
-        hourTotals[h] += secs;
+        if (!isNaN(h) && h >= 0 && h < 24) {
+          hourTotals[h] += secs;
+        }
       }
     });
 
     // Active days count
     const lifeActiveCount = Object.keys(lifeDays).length;
     const l30ActiveCount = Object.values(l30Days).filter(v => v > 0).length;
+    const l7ActiveCount = Object.values(l7Days).filter(v => v > 0).length;
+    const monthActiveCount = Object.values(monthDays).filter(v => v > 0).length;
 
-    // Daily Values Array for chart
-    const l30DailyValues = D.l30dates.map(d => l30Days[d] || 0);
+    // Daily Values Array for charts
+    const l30DailyValues = allL30.map(d => l30Days[d] || 0);
+    const l7DailyValues = l7dates.map(d => l7Days[d] || 0);
+    const monthDailyValues = monthDates.map(d => monthDays[d] || 0);
 
     // Peak Hour
     const peakHour = hourTotals.indexOf(Math.max(...hourTotals, 0));
@@ -95,7 +131,7 @@
     // Streak
     const sortedDays = Object.keys(lifeDays).sort().reverse();
     let streak = 0;
-    const now = new Date(D.generatedAt);
+    const now = new Date(D.generatedAt || Date.now());
     const todayStr = now.toISOString().slice(0, 10);
     const yStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
     
@@ -129,7 +165,9 @@
         totalFmt: fmt(lifeTotalSecs),
         activeDays: lifeActiveCount,
         avgPerDayFmt: fmt(lifeActiveCount > 0 ? Math.round(lifeTotalSecs / lifeActiveCount) : 0),
-        topProjects: getTop(topLife, lifeTotalSecs)
+        topProjects: getTop(topLife, lifeTotalSecs),
+        dailyValues: l30DailyValues,
+        dates: allL30
       },
       l30: {
         totalSecs: l30TotalSecs,
@@ -138,7 +176,25 @@
         avgPerDayFmt: fmt(l30ActiveCount > 0 ? Math.round(l30TotalSecs / l30ActiveCount) : 0),
         topProjects: getTop(topL30, l30TotalSecs),
         dailyValues: l30DailyValues,
-        dates: D.l30dates
+        dates: allL30
+      },
+      l7: {
+        totalSecs: l7TotalSecs,
+        totalFmt: fmt(l7TotalSecs),
+        activeDays: l7ActiveCount,
+        avgPerDayFmt: fmt(l7ActiveCount > 0 ? Math.round(l7TotalSecs / l7ActiveCount) : 0),
+        topProjects: getTop(topL7, l7TotalSecs),
+        dailyValues: l7DailyValues,
+        dates: l7dates
+      },
+      month: {
+        totalSecs: monthTotalSecs,
+        totalFmt: fmt(monthTotalSecs),
+        activeDays: monthActiveCount,
+        avgPerDayFmt: fmt(monthActiveCount > 0 ? Math.round(monthTotalSecs / monthActiveCount) : 0),
+        topProjects: getTop(topMonth, monthTotalSecs),
+        dailyValues: monthDailyValues,
+        dates: monthDates
       },
       streak,
       peakLabel,
@@ -155,7 +211,7 @@
     streak:    { label: 'Current Streak', get: () => '🔥 ' + computed.streak + (computed.streak===1?' day':' days') },
     peakHours: { label: 'Peak Hours', get: () => '⚡ ' + computed.peakLabel },
     topProject:{ label: 'Top Project', get: (data) => data.topProjects[0] ? data.topProjects[0].name : 'None' },
-    l30Total:  { label: 'Last 30 Days Total', get: () => computed.l30.totalFmt },
+    rangeTotal:{ label: 'Selected Range Total', get: (data) => data.totalFmt },
     totalProj: { label: 'Total Projects', get: () => String(computed.totalProjects) },
   };
 
@@ -196,20 +252,16 @@
   // Build projects list
   function initProjects(filterText = '') {
     projectsListEl.innerHTML = '';
-    const allProjs = Object.keys(D.projects).sort();
+    const allProjs = Object.keys(D.projects || {}).sort();
     allProjs.forEach(proj => {
       if (filterText && !proj.toLowerCase().includes(filterText.toLowerCase())) return;
 
       const lbl = document.createElement('label');
-      lbl.style.display = 'block';
-      lbl.style.marginBottom = '4px';
-      lbl.style.cursor = 'pointer';
       
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.value = proj;
       cb.checked = state.selectedProjects.includes(proj);
-      cb.style.marginRight = '6px';
       
       cb.addEventListener('change', (e) => {
         if (e.target.checked) {
@@ -237,7 +289,7 @@
     selectAllBtn.addEventListener('click', (e) => {
       e.preventDefault();
       const filterText = projectSearch.value.toLowerCase();
-      Object.keys(D.projects).forEach(proj => {
+      Object.keys(D.projects || {}).forEach(proj => {
         if (filterText && !proj.toLowerCase().includes(filterText)) return;
         if (!state.selectedProjects.includes(proj)) state.selectedProjects.push(proj);
       });
@@ -250,7 +302,7 @@
     selectNoneBtn.addEventListener('click', (e) => {
       e.preventDefault();
       const filterText = projectSearch.value.toLowerCase();
-      Object.keys(D.projects).forEach(proj => {
+      Object.keys(D.projects || {}).forEach(proj => {
         if (filterText && !proj.toLowerCase().includes(filterText)) return;
         state.selectedProjects = state.selectedProjects.filter(p => p !== proj);
       });
@@ -280,23 +332,29 @@
     if (e.target.checked) { state.bottom = e.target.value; render(); }
   }));
 
-  funFactSelect.addEventListener('change', (e) => {
-    state.funFact = e.target.value;
-    render();
-  });
-
-  downloadBtn.addEventListener('click', () => {
-    statusText.textContent = 'Saving...';
-    vscode.postMessage({
-      command: 'saveCard',
-      data: canvas.toDataURL('image/png')
+  if (funFactSelect) {
+    funFactSelect.addEventListener('change', (e) => {
+      state.funFact = e.target.value;
+      render();
     });
-  });
+  }
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      if (statusText) statusText.textContent = 'Saving...';
+      vscode.postMessage({
+        command: 'saveCard',
+        data: canvas.toDataURL('image/png')
+      });
+    });
+  }
 
   window.addEventListener('message', event => {
     if (event.data.command === 'saved') {
-      statusText.textContent = 'Saved successfully!';
-      setTimeout(() => statusText.textContent = '', 3000);
+      if (statusText) {
+        statusText.textContent = 'Saved successfully!';
+        setTimeout(() => statusText.textContent = '', 3000);
+      }
     }
   });
 
@@ -314,19 +372,26 @@
   }
 
   function drawChartHelper(ctx, data, W, PAD, y, c1, c2, textColor) {
-    if(state.chart === 'none') return y;
+    if(state.chart === 'none' || !data.dailyValues || !data.dailyValues.length) return y;
+    
+    let chartLabel = 'ACTIVE DAYS';
+    if (state.range === 'l30') chartLabel = 'LAST 30 ACTIVE DAYS';
+    else if (state.range === 'l7') chartLabel = 'LAST 7 ACTIVE DAYS';
+    else if (state.range === 'month') chartLabel = 'THIS MONTH ACTIVE DAYS';
+    else if (state.range === 'lifetime') chartLabel = 'RECENT ACTIVITY';
+
     ctx.font='600 9px "Segoe UI"'; ctx.fillStyle=textColor;
-    ctx.fillText('LAST 30 ACTIVE DAYS',PAD,y+10); y+=22;
-    const chartH=80,barCount=computed.l30.dailyValues.length;
-    const maxDay = Math.max(...computed.l30.dailyValues, 1);
-    const step=Math.ceil(barCount/7);
+    ctx.fillText(chartLabel, PAD, y+10); y+=22;
+    const chartH=80, barCount=data.dailyValues.length;
+    const maxDay = Math.max(...data.dailyValues, 1);
+    const step=Math.max(1, Math.ceil(barCount/7));
 
     if(state.chart === 'bar') {
-      const barW=Math.max(4,Math.floor((W-PAD*2)/barCount)-2);
+      const barW=Math.max(4, Math.floor((W-PAD*2)/barCount)-2);
       const barGap=Math.floor((W-PAD*2-barW*barCount)/Math.max(barCount-1,1));
-      computed.l30.dailyValues.forEach((v,i) => {
+      data.dailyValues.forEach((v,i) => {
         const bh=Math.max(2,Math.round((v/maxDay)*chartH));
-        const bx=PAD+i*(barW+barGap),by=y+chartH-bh;
+        const bx=PAD+i*(barW+barGap), by=y+chartH-bh;
         if(c2) {
           const bg=ctx.createLinearGradient(bx,by,bx,by+bh);
           bg.addColorStop(0,c1); bg.addColorStop(1,c2);
@@ -336,17 +401,17 @@
         }
       });
       ctx.font='9px "Segoe UI"'; ctx.fillStyle=textColor; ctx.textAlign='center';
-      computed.l30.dates.forEach((d,i) => {
+      data.dates.forEach((d,i) => {
         if(i%step!==0&&i!==barCount-1)return;
         ctx.fillText(d.slice(5),PAD+i*(barW+barGap)+barW/2,y+chartH+14);
       });
       ctx.textAlign='left';
     } else if (state.chart === 'line') {
-      const pointGap = (W-PAD*2)/(barCount-1);
+      const pointGap = (W-PAD*2)/Math.max(1, barCount-1);
       ctx.beginPath();
       ctx.moveTo(PAD, y+chartH);
       const points = [];
-      computed.l30.dailyValues.forEach((v,i) => {
+      data.dailyValues.forEach((v,i) => {
         const bh=Math.round((v/maxDay)*chartH);
         points.push({x: PAD+i*pointGap, y: y+chartH-bh});
       });
@@ -365,7 +430,7 @@
       });
 
       ctx.font='9px "Segoe UI"'; ctx.fillStyle=textColor; ctx.textAlign='center';
-      computed.l30.dates.forEach((d,i) => {
+      data.dates.forEach((d,i) => {
         if(i%step!==0&&i!==barCount-1)return;
         ctx.fillText(d.slice(5),PAD+i*pointGap,y+chartH+14);
       });
@@ -375,8 +440,8 @@
   }
 
   // Generate Fun Fact string
-  function getFunFactStr() {
-    const secs = computed.lifetime.totalSecs;
+  function getFunFactStr(currentData) {
+    const secs = currentData.totalSecs || 0;
     switch(state.funFact) {
       case 'coffee': return '☕  You powered through ~' + Math.floor(secs/(30*60)) + ' cups of coffee';
       case 'netflix': return '📺  Enough to watch ' + Math.floor(secs/(45*60)) + ' Netflix episodes instead';
@@ -397,6 +462,16 @@
 
   // --- Renderers ---
   const COLORS = ['#61afef','#98c379','#e5c07b','#e06c75','#c678dd','#56b6c2'];
+
+  function getRangeLabel() {
+    switch (state.range) {
+      case 'l30': return 'LAST 30 DAYS';
+      case 'l7': return 'LAST 7 DAYS';
+      case 'month': return 'THIS MONTH';
+      case 'lifetime':
+      default: return 'LIFETIME';
+    }
+  }
 
   function renderLayoutA(data, W, H, SC) {
     ctx.save();
@@ -434,11 +509,10 @@
     ctx.font='800 58px "Segoe UI"'; ctx.fillStyle='#ffffff';
     ctx.fillText(data.totalFmt,PAD,y+52);
     ctx.font='500 10px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.22)';
-    const rLabel = state.range==='lifetime' ? 'LIFETIME' : 'LAST 30 DAYS';
-    ctx.fillText('TOTAL CODING TIME  •  ' + rLabel,PAD,y+70);
+    ctx.fillText('TOTAL CODING TIME  •  ' + getRangeLabel(),PAD,y+70);
     y+=92;
 
-    const ffStr = getFunFactStr();
+    const ffStr = getFunFactStr(data);
     if(ffStr) {
       ctx.font='500 10px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.4)';
       ctx.fillText(ffStr, PAD, y-4);
@@ -448,7 +522,7 @@
     const sw=(W-PAD*2-30)/4;
     state.slots.forEach((key,i) => {
       const opt = STAT_OPTIONS[key];
-      const val = opt.get(data);
+      const val = opt ? opt.get(data) : '--';
       const sx=PAD+i*(sw+10);
       const c = COLORS[i%COLORS.length];
       
@@ -462,7 +536,7 @@
       ctx.font='700 18px "Segoe UI"'; ctx.fillStyle=c; ctx.textAlign='center';
       ctx.fillText(val,sx+sw/2,y+34);
       ctx.font='500 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.25)';
-      ctx.fillText(opt.label.toUpperCase(),sx+sw/2,y+56); ctx.textAlign='left';
+      ctx.fillText(opt ? opt.label.toUpperCase() : '',sx+sw/2,y+56); ctx.textAlign='left';
     });
     y+=94;
 
@@ -520,11 +594,10 @@
     ctx.font='800 58px "Segoe UI"'; ctx.fillStyle='#0f172a';
     ctx.fillText(data.totalFmt,PAD,y+52);
     ctx.font='600 10px "Segoe UI"'; ctx.fillStyle='#64748b';
-    const rLabel = state.range==='lifetime' ? 'LIFETIME' : 'LAST 30 DAYS';
-    ctx.fillText('TOTAL CODING TIME  •  ' + rLabel,PAD,y+70);
+    ctx.fillText('TOTAL CODING TIME  •  ' + getRangeLabel(),PAD,y+70);
     y+=92;
 
-    const ffStr = getFunFactStr();
+    const ffStr = getFunFactStr(data);
     if(ffStr) {
       ctx.font='500 10px "Segoe UI"'; ctx.fillStyle='#64748b';
       ctx.fillText(ffStr, PAD, y-4);
@@ -534,7 +607,7 @@
     const sw=(W-PAD*2-30)/4;
     state.slots.forEach((key,i) => {
       const opt = STAT_OPTIONS[key];
-      const val = opt.get(data);
+      const val = opt ? opt.get(data) : '--';
       const sx=PAD+i*(sw+10);
       
       rr(sx,y,sw,78,8); ctx.fillStyle='#f8fafc'; ctx.fill();
@@ -543,7 +616,7 @@
       ctx.font='700 18px "Segoe UI"'; ctx.fillStyle='#0f172a'; ctx.textAlign='center';
       ctx.fillText(val,sx+sw/2,y+36);
       ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='#64748b';
-      ctx.fillText(opt.label.toUpperCase(),sx+sw/2,y+56); ctx.textAlign='left';
+      ctx.fillText(opt ? opt.label.toUpperCase() : '',sx+sw/2,y+56); ctx.textAlign='left';
     });
     y+=94;
 
@@ -575,38 +648,61 @@
     ctx.restore();
   }
 
+  // --- Upgraded Gradient Mode (Layout C) ---
   function renderLayoutC(data, W, H, SC) {
     ctx.save();
     rr(0,0,W,H,24); 
+    
+    // Rich multi-stop gradient background
     const bg=ctx.createLinearGradient(0,0,W,H);
-    bg.addColorStop(0,'#4338ca'); bg.addColorStop(1,'#1d4ed8');
+    bg.addColorStop(0,'#0f172a');   // Slate 900
+    bg.addColorStop(0.35,'#3b0764'); // Purple 950
+    bg.addColorStop(0.7,'#1e1b4b');  // Indigo 950
+    bg.addColorStop(1,'#0284c7');    // Sky 600
     ctx.fillStyle=bg; ctx.fill();
+
+    // Ambient radial light orbs
+    const orb1=ctx.createRadialGradient(W-80,80,0,W-80,80,280);
+    orb1.addColorStop(0,'rgba(168,85,247,0.35)');
+    orb1.addColorStop(1,'transparent');
+    ctx.fillStyle=orb1; ctx.fillRect(0,0,W,H);
+
+    const orb2=ctx.createRadialGradient(80,H-100,0,80,H-100,260);
+    orb2.addColorStop(0,'rgba(56,189,248,0.3)');
+    orb2.addColorStop(1,'transparent');
+    ctx.fillStyle=orb2; ctx.fillRect(0,0,W,H);
+
+    // Multi-color vibrant top accent bar
+    const bar=ctx.createLinearGradient(0,0,W,0);
+    bar.addColorStop(0,'#a855f7'); bar.addColorStop(0.5,'#38bdf8'); bar.addColorStop(1,'#34d399');
+    rr(0,0,W,5,0); ctx.fillStyle=bar; ctx.fill();
 
     const PAD=40; let y=PAD;
 
-    drawLogo(logoImg, PAD, y-2, 26, '#fff');
-    ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#fff'; ctx.letterSpacing='1.5px';
+    drawLogo(logoImg, PAD, y-2, 26, '#38bdf8');
+    ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#ffffff'; ctx.letterSpacing='1.5px';
     ctx.fillText('DEV TIMEKEEPER', PAD+34, y+15); ctx.letterSpacing='0px';
 
     if(computed.milestoneLabel) {
       ctx.font='700 10px "Segoe UI"';
       const bw=ctx.measureText('🏆 '+computed.milestoneLabel).width+24;
-      rr(W-PAD-bw,y,bw,24,12); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.fillText('🏆 '+computed.milestoneLabel,W-PAD-bw+12,y+16);
+      rr(W-PAD-bw,y,bw,24,12); ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.fill();
+      rr(W-PAD-bw,y,bw,24,12); ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='#ffffff'; ctx.fillText('🏆 '+computed.milestoneLabel,W-PAD-bw+12,y+16);
     }
     y+=60;
 
     ctx.font='800 64px "Segoe UI"'; ctx.fillStyle='#ffffff';
     ctx.fillText(data.totalFmt,PAD,y+54);
-    ctx.font='600 11px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.6)';
-    const rLabel = state.range==='lifetime' ? 'LIFETIME' : 'LAST 30 DAYS';
-    ctx.fillText('TOTAL CODING TIME  •  ' + rLabel,PAD,y+76);
+    ctx.font='600 11px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.fillText('TOTAL CODING TIME  •  ' + getRangeLabel(),PAD,y+76);
     y+=100;
 
-    const ffStr = getFunFactStr();
+    const ffStr = getFunFactStr(data);
     if(ffStr) {
-      rr(PAD,y,W-PAD*2,36,8); ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fill();
-      ctx.font='600 11px "Segoe UI"'; ctx.fillStyle='#fff';
+      rr(PAD,y,W-PAD*2,36,10); ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fill();
+      rr(PAD,y,W-PAD*2,36,10); ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.font='600 11px "Segoe UI"'; ctx.fillStyle='#ffffff';
       ctx.fillText(ffStr, PAD+14, y+22);
       y+=56;
     }
@@ -614,40 +710,43 @@
     const sw=(W-PAD*2-30)/4;
     state.slots.forEach((key,i) => {
       const opt = STAT_OPTIONS[key];
-      const val = opt.get(data);
+      const val = opt ? opt.get(data) : '--';
       const sx=PAD+i*(sw+10);
       
-      rr(sx,y,sw,82,12); ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fill();
+      rr(sx,y,sw,82,12); ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fill();
+      rr(sx,y,sw,82,12); ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1; ctx.stroke();
       
-      ctx.font='700 18px "Segoe UI"'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+      ctx.font='700 18px "Segoe UI"'; ctx.fillStyle='#ffffff'; ctx.textAlign='center';
       ctx.fillText(val,sx+sw/2,y+38);
-      ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.6)';
-      ctx.fillText(opt.label.toUpperCase(),sx+sw/2,y+60); ctx.textAlign='left';
+      ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.65)';
+      ctx.fillText(opt ? opt.label.toUpperCase() : '',sx+sw/2,y+60); ctx.textAlign='left';
     });
     y+=104;
 
-    y = drawChartHelper(ctx, data, W, PAD, y, '#ffffff', null, 'rgba(255,255,255,0.6)');
+    y = drawChartHelper(ctx, data, W, PAD, y, '#38bdf8', 'rgba(56,189,248,0.15)', 'rgba(255,255,255,0.7)');
 
     if (state.bottom === 'projects') {
-      ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.6)';
+      ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.fillText('TOP PROJECTS',PAD,y+10); y+=22;
       data.topProjects.slice(0,4).forEach((entry,i) => {
         const rx=y+i*38;
-        ctx.font='600 13px "Segoe UI"'; ctx.fillStyle='#fff';
+        ctx.font='600 13px "Segoe UI"'; ctx.fillStyle='#ffffff';
         let nm=entry.name; while(ctx.measureText(nm).width>W-PAD*2-80&&nm.length>4)nm=nm.slice(0,-1);
         if(nm!==entry.name)nm+='…'; ctx.fillText(nm,PAD,rx+14);
-        ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.textAlign='right';
+        ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#38bdf8'; ctx.textAlign='right';
         ctx.fillText(entry.fmt,W-PAD,rx+14); ctx.textAlign='left';
-        rr(PAD,rx+22,W-PAD*2,4,2); ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fill();
+        rr(PAD,rx+22,W-PAD*2,4,2); ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fill();
         if(entry.pct>0){
           const fw=Math.max(4,Math.round((entry.pct/100)*(W-PAD*2)));
-          rr(PAD,rx+22,fw,4,2); ctx.fillStyle='#fff'; ctx.fill();
+          const fg=ctx.createLinearGradient(PAD,0,PAD+fw,0);
+          fg.addColorStop(0,'#a855f7'); fg.addColorStop(1,'#38bdf8');
+          rr(PAD,rx+22,fw,4,2); ctx.fillStyle=fg; ctx.fill();
         }
       });
       y+=data.topProjects.slice(0,4).length*38+16;
     }
 
-    ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke(); y+=14;
     ctx.font='500 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.fillText('Generated '+new Date().toLocaleDateString()+' • Dev Timekeeper',PAD,y+10);
@@ -655,14 +754,15 @@
   }
 
   function render() {
-    const data = state.range === 'lifetime' ? computed.lifetime : computed.l30;
+    if (!computed) computeData();
+    const data = computed[state.range] || computed.lifetime;
     
     // Calculate dynamic height based on options
     let H = 340; // Base height (header + total + footer)
     if (state.funFact !== 'none') H += (state.layout==='C'?56:16);
     H += 94; // Slots
     if (state.chart !== 'none') H += 128; // Chart
-    if (state.bottom === 'projects') H += Math.max(1, Math.min(4, data.topProjects.length)) * 38 + 34; // Projects
+    if (state.bottom === 'projects') H += Math.max(1, Math.min(4, (data.topProjects || []).length)) * 38 + 34; // Projects
 
     const W = 680;
     const SC = 2; // Retina scale

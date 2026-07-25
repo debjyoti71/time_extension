@@ -1,15 +1,24 @@
 :root {
   --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif;
-  --bg-main: var(--vscode-editor-background, #1e1e1e);
-  --bg-panel: var(--vscode-sideBar-background, #252526);
-  --fg: var(--vscode-editor-foreground, #cccccc);
-  --fg-dim: var(--vscode-descriptionForeground, #717171);
-  --border: var(--vscode-panel-border, #3c3c3c);
-  --accent: var(--vscode-button-background, #0e639c);
-  --accent-hover: var(--vscode-button-hoverBackground, #1177bb);
-  --bg-input: var(--vscode-input-background, #3c3c3c);
-  --fg-input: var(--vscode-input-foreground, #cccccc);
-  --border-input: var(--vscode-input-border, #3c3c3c);
+  --bg-main: #0e0e10;
+  --bg-panel: #1a1a1e;
+  --fg: #d4d4d4;
+  --fg-dim: #888888;
+  --border: #222226;
+  --border-interactive: #2a2a2e;
+  --accent: #61afef;
+  --accent-hover: #4fa0e0;
+  --bg-input: #0e0e10;
+  --fg-input: #d4d4d4;
+  --border-input: #2a2a2e;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --transition-fast: 0.15s ease;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -30,8 +39,8 @@ body {
 
 /* Sidebar Controls */
 .controls {
-  width: 300px;
-  min-width: 300px;
+  width: 320px;
+  min-width: 320px;
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border);
   display: flex;
@@ -40,101 +49,147 @@ body {
 }
 
 .controls-header {
-  padding: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.controls-icon { font-size: 16px; }
+
+.controls-icon {
+  font-size: 18px;
+  color: var(--accent);
+}
 
 .section {
-  padding: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-.section:last-child { border-bottom: none; }
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-dim);
-  margin-bottom: 10px;
+
+.section:last-child {
+  border-bottom: none;
 }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+}
+
 .section-hint {
   font-weight: normal;
-  font-size: 10px;
+  font-size: 9px;
   opacity: 0.7;
 }
 
 /* Layout Picker */
 .layout-picker {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
+
 .layout-btn {
   flex: 1;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-interactive);
+  border-radius: var(--radius-md);
   padding: 8px 4px;
   color: var(--fg-dim);
   font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  transition: 0.2s;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
+
 .layout-btn:hover {
-  background: var(--bg-input);
-  color: var(--fg);
+  background: #222228;
+  color: #ffffff;
+  transform: translateY(-1px);
 }
+
 .layout-btn.active {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(14, 99, 156, 0.1);
+  background: rgba(97, 175, 239, 0.1);
+  box-shadow: 0 0 0 1px var(--accent);
 }
+
 .layout-thumb {
   width: 100%;
   height: 36px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
-.a-thumb { background: linear-gradient(135deg, #0a0a14, #1a1a24); border: 1px solid #c678dd55; }
-.b-thumb { background: #ffffff; border: 1px solid #ddd; }
-.c-thumb { background: linear-gradient(135deg, #00d4ff, #7c3aed); }
 
-/* Radios */
+.a-thumb {
+  background: linear-gradient(135deg, #0a0a14, #1a1a24);
+  border: 1px solid rgba(198, 120, 221, 0.35);
+}
+
+.b-thumb {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.c-thumb {
+  background: linear-gradient(135deg, #0f172a 0%, #3b0764 50%, #0284c7 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+/* Radios & Selects */
 .radio-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 .radio-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 12px;
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-item input {
+  margin: 0;
+  accent-color: var(--accent);
   cursor: pointer;
 }
-.radio-item input { margin: 0; cursor: pointer; }
 
-/* Selects */
+.radio-item:hover {
+  color: #ffffff;
+}
+
 .select {
   width: 100%;
   background-color: var(--bg-input);
   color: var(--fg-input);
   border: 1px solid var(--border-input);
-  padding: 6px;
-  border-radius: 2px;
-  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-family: inherit;
   outline: none;
+  transition: border-color var(--transition-fast);
 }
-.select:focus { border-color: var(--accent); }
+
+.select:focus {
+  border-color: var(--accent);
+}
 
 /* Slots */
 .slots {
@@ -142,35 +197,118 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
 .slot-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .slot-num {
   font-size: 11px;
+  font-weight: 600;
   color: var(--fg-dim);
-  width: 12px;
+  width: 14px;
 }
 
-/* Download */
+/* Project Selection Search & List */
+.project-search-wrap {
+  margin-top: 6px;
+}
+
+.project-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--fg-input);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.project-search-input:focus {
+  border-color: var(--accent);
+}
+
+.project-action-links {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.project-action-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+}
+
+.project-action-btn:hover {
+  color: var(--accent-hover);
+}
+
+.projects-list {
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 11px;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+
+.projects-list label {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  color: var(--fg);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.projects-list label:hover {
+  color: #ffffff;
+}
+
+.projects-list input {
+  margin-right: 8px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Download Section */
 .download-section {
   padding-top: 24px;
   padding-bottom: 40px;
 }
+
 .download-btn {
   width: 100%;
   background-color: var(--accent);
-  color: #fff;
+  color: #ffffff;
   border: none;
-  padding: 10px;
+  padding: 12px;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 2px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
-.download-btn:hover { background-color: var(--accent-hover); }
+
+.download-btn:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.download-btn:active {
+  transform: translateY(1px);
+}
+
 .status-text {
   font-size: 12px;
   color: var(--fg-dim);
@@ -182,7 +320,7 @@ body {
 /* Preview Area */
 .preview-panel {
   flex: 1;
-  background-color: #0e0e0e; /* distinct from UI */
+  background-color: #0a0a0c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,15 +328,22 @@ body {
   overflow: auto;
   position: relative;
   background-image: 
-    linear-gradient(45deg, #181818 25%, transparent 25%), 
-    linear-gradient(-45deg, #181818 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #181818 75%),
-    linear-gradient(-45deg, transparent 75%, #181818 75%);
+    linear-gradient(45deg, #141418 25%, transparent 25%), 
+    linear-gradient(-45deg, #141418 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #141418 75%),
+    linear-gradient(-45deg, transparent 75%, #141418 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
 }
 
 canvas {
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  transition: opacity 0.2s;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  border-radius: 16px;
+  transition: opacity 0.2s ease;
+}
+
+/* Focus Ring Accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

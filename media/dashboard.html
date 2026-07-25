@@ -4,17 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="{{CSS_URI}}" />
-  <title>Time Tracker</title>
+  <title>Dev Timekeeper</title>
 </head>
 <body>
-  <div class="header">
-    <h1>&#9203; Time Tracker</h1>
-    <div style="display:flex;align-items:center;gap:16px;">
+  <header class="header">
+    <h1>⏱️ Dev Timekeeper</h1>
+    <div class="header-actions">
       <span id="lastUpdated" class="last-updated"></span>
       <button id="shareCardBtn" class="action-btn" title="Generate a shareable card image">Share Card</button>
       <div class="menu-wrap">
-        <button id="menuBtn" class="menu-btn" title="Show/Hide sections">&#8943;</button>
-        <div id="menuDropdown" class="menu-dropdown hidden">
+        <button id="menuBtn" class="menu-btn" title="Show/Hide sections" aria-expanded="false" aria-controls="menuDropdown">&#8943;</button>
+        <div id="menuDropdown" class="menu-dropdown hidden" role="menu">
           <div class="menu-label">Toggle Sections</div>
           <label class="menu-item"><input type="checkbox" data-section="liveStats" checked> Live Stats</label>
           <label class="menu-item"><input type="checkbox" data-section="lifetimeInsights" checked> Lifetime Insights</label>
@@ -29,143 +29,145 @@
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div data-section="devBar" class="hidden">
-    <div class="dev-bar">
-      <span class="dev-bar-label">DEV</span>
-      <span>Tracking repo: <strong id="devRepo">--</strong></span>
-      <span>File: <strong id="devFile">--</strong></span>
-      <span>Session: <strong id="devSession">--</strong></span>
-    </div>
-  </div>
-
-  <div data-section="liveStats">
-    <div class="section-label">Live Stats</div>
-    <div class="cards cards-4">
-      <div class="card">
-        <div class="card-label">Today</div>
-        <div class="card-value accent-blue" id="todayTotal">--</div>
-        <div class="card-delta" id="todayDelta"></div>
-      </div>
-      <div class="card">
-        <div class="card-label">This Week</div>
-        <div class="card-value accent-green" id="weekTotal">--</div>
-        <div class="card-delta" id="weekDelta"></div>
-      </div>
-      <div class="card">
-        <div class="card-label">This Month</div>
-        <div class="card-value accent-yellow" id="monthTotal">--</div>
-        <div class="card-delta" id="monthDelta"></div>
-      </div>
-      <div class="card">
-        <div class="card-label">Lifetime</div>
-        <div class="card-value accent-purple" id="lifetimeTotal">--</div>
+  <main class="dashboard-main">
+    <div data-section="devBar" class="hidden">
+      <div class="dev-bar">
+        <span class="dev-bar-label">DEV</span>
+        <span>Tracking repo: <strong id="devRepo">--</strong></span>
+        <span>File: <strong id="devFile">--</strong></span>
+        <span>Session: <strong id="devSession">--</strong></span>
       </div>
     </div>
-  </div>
 
-  <div data-section="lifetimeInsights">
-    <div class="section-label">Lifetime Insights</div>
-    <div class="cards cards-4">
-      <div class="card"><div class="card-label">Active Days</div><div class="card-value accent-blue" id="activeDays">--</div></div>
-      <div class="card"><div class="card-label">Avg / Active Day</div><div class="card-value accent-green" id="avgPerDay">--</div></div>
-      <div class="card"><div class="card-label">Total Projects</div><div class="card-value accent-yellow" id="totalProjects">--</div></div>
-      <div class="card"><div class="card-label">Top Project</div><div class="card-value accent-purple" id="mostActiveProj">--</div></div>
-    </div>
-  </div>
-
-  <div data-section="projectsOverview">
-    <div class="section-label">Projects Overview</div>
-    <div class="charts-row">
-      <div class="chart-box">
-        <div class="chart-title">Top 10 Projects - Lifetime (h)</div>
-        <canvas id="barChart"></canvas>
+    <div data-section="liveStats">
+      <div class="section-label">Live Stats</div>
+      <div class="cards cards-4">
+        <div class="card">
+          <div class="card-label">Today</div>
+          <div class="card-value accent-blue" id="todayTotal">--</div>
+          <div class="card-delta" id="todayDelta"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">This Week</div>
+          <div class="card-value accent-green" id="weekTotal">--</div>
+          <div class="card-delta" id="weekDelta"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">This Month</div>
+          <div class="card-value accent-yellow" id="monthTotal">--</div>
+          <div class="card-delta" id="monthDelta"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Lifetime</div>
+          <div class="card-value accent-purple" id="lifetimeTotal">--</div>
+        </div>
       </div>
-      <div class="chart-box">
-        <div class="chart-title">Share by Project</div>
-        <div style="display:flex;align-items:center;gap:16px;">
-          <div style="position:relative;flex-shrink:0;width:180px;height:180px;">
-            <canvas id="pieChart" style="max-height:none;"></canvas>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
-              <div id="pieCenterValue" style="font-size:15px;font-weight:700;color:#fff;">--</div>
-              <div id="pieCenterLabel" style="font-size:10px;color:#888;margin-top:2px;">Projects</div>
+    </div>
+
+    <div data-section="lifetimeInsights">
+      <div class="section-label">Lifetime Insights</div>
+      <div class="cards cards-4">
+        <div class="card"><div class="card-label">Active Days</div><div class="card-value accent-blue" id="activeDays">--</div></div>
+        <div class="card"><div class="card-label">Avg / Active Day</div><div class="card-value accent-green" id="avgPerDay">--</div></div>
+        <div class="card"><div class="card-label">Total Projects</div><div class="card-value accent-yellow" id="totalProjects">--</div></div>
+        <div class="card"><div class="card-label">Top Project</div><div class="card-value accent-purple" id="mostActiveProj">--</div></div>
+      </div>
+    </div>
+
+    <div data-section="projectsOverview">
+      <div class="section-label">Projects Overview</div>
+      <div class="charts-row">
+        <div class="chart-box">
+          <div class="chart-title">Top 10 Projects - Lifetime (h)</div>
+          <canvas id="barChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Share by Project</div>
+          <div class="pie-container">
+            <div class="pie-canvas-wrap">
+              <canvas id="pieChart"></canvas>
+              <div class="pie-center-overlay">
+                <div id="pieCenterValue" class="pie-center-val">--</div>
+                <div id="pieCenterLabel" class="pie-center-lbl">Projects</div>
+              </div>
             </div>
+            <div id="pieLegend" class="pie-legend-box"></div>
           </div>
-          <div id="pieLegend" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;"></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div data-section="thisWeek">
-    <div class="section-label">This Week</div>
-    <div class="charts-row">
-      <div class="chart-box">
-        <div class="chart-title">Daily Coding Time - Last 7 Days by Project</div>
-        <canvas id="lineChart"></canvas>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Top 5 Projects This Week (h)</div>
-        <canvas id="weekBarChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div data-section="trends">
-    <div class="section-label">Trends</div>
-    <div class="charts-row">
-      <div class="chart-box">
-        <div class="chart-title">Last 30 Days - Activity by Project (h)</div>
-        <canvas id="heatmapChart"></canvas>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Last 6 Months (h)</div>
-        <canvas id="monthChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div data-section="codingPatterns">
-    <div class="section-label">Coding Patterns</div>
-    <div class="chart-box full-width">
-      <div class="chart-title">Coding by Hour of Day</div>
-      <canvas id="hourChart"></canvas>
-    </div>
-  </div>
-
-  <div data-section="langBreakdown">
-    <div class="section-label">Language Breakdown by Project</div>
-    <div class="chart-box full-width">
-      <div id="bubbleContainer" style="width:100%;min-height:540px;"></div>
-    </div>
-  </div>
-
-  <div data-section="allProjects">
-    <div class="section-label">All Projects</div>
-    <div class="table-box">
-      <div class="table-header">
-        <span class="chart-title">Project Details</span>
-        <div class="table-controls">
-          <input id="filterInput" placeholder="Filter project..." />
-          <button id="toggleRows">Show All</button>
+    <div data-section="thisWeek">
+      <div class="section-label">This Week</div>
+      <div class="charts-row">
+        <div class="chart-box">
+          <div class="chart-title">Daily Coding Time - Last 7 Days by Project</div>
+          <canvas id="lineChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Top 5 Projects This Week (h)</div>
+          <canvas id="weekBarChart"></canvas>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th data-col="name">Project</th>
-            <th data-col="todaySecs">Today</th>
-            <th data-col="last7Secs">Last 7 Days</th>
-            <th data-col="rolling30Secs">Last 30 Days</th>
-            <th data-col="totalSecs">Lifetime</th>
-            <th data-col="lastActive">Last Active</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
     </div>
-  </div>
+
+    <div data-section="trends">
+      <div class="section-label">Trends</div>
+      <div class="charts-row">
+        <div class="chart-box">
+          <div class="chart-title">Last 30 Days - Activity by Project (h)</div>
+          <canvas id="heatmapChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Last 6 Months (h)</div>
+          <canvas id="monthChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div data-section="codingPatterns">
+      <div class="section-label">Coding Patterns</div>
+      <div class="chart-box full-width">
+        <div class="chart-title">Coding by Hour of Day</div>
+        <canvas id="hourChart"></canvas>
+      </div>
+    </div>
+
+    <div data-section="langBreakdown">
+      <div class="section-label">Language Breakdown by Project</div>
+      <div class="chart-box full-width">
+        <div id="bubbleContainer" class="bubble-chart-wrap"></div>
+      </div>
+    </div>
+
+    <div data-section="allProjects">
+      <div class="section-label">All Projects</div>
+      <div class="table-box">
+        <div class="table-header">
+          <span class="chart-title">Project Details</span>
+          <div class="table-controls">
+            <input id="filterInput" placeholder="Filter project..." aria-label="Filter projects" />
+            <button id="toggleRows">Show All</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-col="name">Project</th>
+              <th data-col="todaySecs">Today</th>
+              <th data-col="last7Secs">Last 7 Days</th>
+              <th data-col="rolling30Secs">Last 30 Days</th>
+              <th data-col="totalSecs">Lifetime</th>
+              <th data-col="lastActive">Last Active</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
   <script src="{{CHART_URI}}"></script>
   <script>window.require = undefined;</script>

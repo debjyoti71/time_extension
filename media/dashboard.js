@@ -1,9 +1,9 @@
 (function () {
   const vscode = acquireVsCodeApi();
-  let data = __data;
+  let data = __data || {};
 
   const GRID = '#1e1e22';
-  const TICK = '#555';
+  const TICK = '#888888';
   const C = ['#61afef','#98c379','#e5c07b','#e06c75','#c678dd','#56b6c2','#d19a66','#abb2bf'];
   const STACK = ['#e06c75','#98c379','#c678dd','#e5c07b','#56b6c2','#61afef','#d19a66','#abb2bf'];
   const LANG_COLORS = {
@@ -15,12 +15,12 @@
   };
 
   function fmt(secs) {
-    if (!secs || secs <= 0) { return '--'; }
+    if (secs === null || secs === undefined || isNaN(secs) || secs <= 0) { return '--'; }
     const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
     return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
   }
   function fmtDiff(secs) { return secs > 0 ? fmt(secs) : '0m'; }
-  function hrs(secs) { return +(secs / 3600).toFixed(1); }
+  function hrs(secs) { if (!secs || isNaN(secs)) { return 0; } return +(secs / 3600).toFixed(1); }
 
   const scaleOpts = function(unit) {
     return {
@@ -70,6 +70,7 @@
   }
 
   function updateCards() {
+    if (!data) { return; }
     document.getElementById('todayTotal').textContent     = fmt(data.todayTotal);
     document.getElementById('weekTotal').textContent      = fmt(data.weekTotal);
     document.getElementById('monthTotal').textContent     = fmt(data.monthTotal);
@@ -98,6 +99,10 @@
       }
     }
     const entries = Object.entries(langTotals).sort(function(a,b){return b[1]-a[1];}).slice(0,30);
+    if (!entries.length) {
+      container.innerHTML = '<div class="empty-bubbles-msg" style="color:var(--text-muted);text-align:center;padding:40px 0;">No language data collected yet</div>';
+      return;
+    }
     const maxVal = entries[0][1];
 
     const W = container.offsetWidth || 860;
@@ -147,7 +152,6 @@
     var svgParts = [];
     nodes.forEach(function(n) {
       var color = LANG_COLORS[n.lang] || '#555';
-      // Use a bright label color so yellow JS stroke stays readable
       var textColor = '#e6f1ff';
       var label = n.lang.length > 10 ? n.lang.slice(0,9)+'...' : n.lang;
       svgParts.push(
@@ -161,6 +165,7 @@
   }
 
   function drawCharts() {
+    if (!data || !data.folderRows) { return; }
     // 1. Top 10 lifetime bar
     const top10 = [...data.folderRows].slice(0, 10);
     makeChart('barChart', {
@@ -173,7 +178,7 @@
     });
 
     // 2. Donut share
-    const pie8 = Object.entries(data.dirTotals).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
+    const pie8 = Object.entries(data.dirTotals || {}).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
     var pieColors = C.slice(0, pie8.length);
     makeChart('pieChart', {
       type: 'doughnut',
@@ -197,21 +202,20 @@
         },
         onHover: function(evt, elements) {
           var canvas = document.getElementById('pieChart');
-          canvas.style.cursor = elements.length ? 'pointer' : 'default';
+          if (canvas) { canvas.style.cursor = elements.length ? 'pointer' : 'default'; }
           var legendItems = document.querySelectorAll('.pie-legend-item');
           legendItems.forEach(function(el, i) {
             el.style.opacity = (!elements.length || elements[0].index === i) ? '1' : '0.35';
           });
-          // update center label
           var centerLabel = document.getElementById('pieCenterLabel');
           var centerValue = document.getElementById('pieCenterValue');
-          if (elements.length) {
+          if (elements.length && pie8[elements[0].index]) {
             var idx = elements[0].index;
-            centerLabel.textContent = pie8[idx][0];
-            centerValue.textContent = fmt(pie8[idx][1]);
+            if (centerLabel) { centerLabel.textContent = pie8[idx][0]; }
+            if (centerValue) { centerValue.textContent = fmt(pie8[idx][1]); }
           } else {
-            centerLabel.textContent = 'Projects';
-            centerValue.textContent = fmt(data.lifetimeSecs);
+            if (centerLabel) { centerLabel.textContent = 'Projects'; }
+            if (centerValue) { centerValue.textContent = fmt(data.lifetimeSecs); }
           }
         }
       },
@@ -221,10 +225,10 @@
     var pieLegend = document.getElementById('pieLegend');
     if (pieLegend) {
       pieLegend.innerHTML = pie8.map(function(x, i) {
-        return '<div class="pie-legend-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;transition:opacity 0.15s;">'
+        return '<div class="pie-legend-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;transition:opacity 0.15s;">'
           + '<span style="width:10px;height:10px;border-radius:50%;background:'+C[i]+';flex-shrink:0;"></span>'
-          + '<span style="font-size:11px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+x[0]+'</span>'
-          + '<span style="font-size:11px;color:'+C[i]+';margin-left:auto;padding-left:8px;">'+fmt(x[1])+'</span>'
+          + '<span style="font-size:11px;font-weight:500;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;" title="'+x[0]+'">'+x[0]+'</span>'
+          + '<span style="font-size:11px;font-weight:600;color:'+C[i]+';margin-left:auto;padding-left:8px;font-variant-numeric:tabular-nums;">'+fmt(x[1])+'</span>'
           + '</div>';
       }).join('');
       pieLegend.querySelectorAll('.pie-legend-item').forEach(function(el) {
@@ -241,8 +245,8 @@
           });
           var centerLabel = document.getElementById('pieCenterLabel');
           var centerValue = document.getElementById('pieCenterValue');
-          if (centerLabel) { centerLabel.textContent = pie8[idx][0]; }
-          if (centerValue) { centerValue.textContent = fmt(pie8[idx][1]); }
+          if (centerLabel && pie8[idx]) { centerLabel.textContent = pie8[idx][0]; }
+          if (centerValue && pie8[idx]) { centerValue.textContent = fmt(pie8[idx][1]); }
         });
         el.addEventListener('mouseleave', function() {
           var chart = charts['pieChart'];
@@ -259,8 +263,14 @@
       });
     }
 
+    // Set initial doughnut center values on load
+    var initCenterLabel = document.getElementById('pieCenterLabel');
+    var initCenterValue = document.getElementById('pieCenterValue');
+    if (initCenterLabel) { initCenterLabel.textContent = 'Projects'; }
+    if (initCenterValue) { initCenterValue.textContent = fmt(data.lifetimeSecs); }
+
     // 3. Last 7 days stacked area by project
-    const l7dates = data.last7dates;
+    const l7dates = data.last7dates || [];
     const l7datasets = (data.last7projects || [])
       .map(function(proj, i) {
         return {
@@ -308,7 +318,7 @@
     });
 
     // 4. Top 5 this week horizontal bar
-    const w5 = data.weekTop5;
+    const w5 = data.weekTop5 || [];
     makeChart('weekBarChart', {
       type: 'bar',
       data: {
@@ -327,7 +337,7 @@
     });
 
     // 5. Last 30 days stacked by project
-    const l30dates = Object.keys(data.last30);
+    const l30dates = Object.keys(data.last30 || {});
     makeChart('heatmapChart', {
       type: 'bar',
       data: {
@@ -383,7 +393,7 @@
     });
 
     // 6. Last 6 months
-    const months = Object.keys(data.last6months);
+    const months = Object.keys(data.last6months || {});
     makeChart('monthChart', {
       type: 'bar',
       data: {
@@ -458,7 +468,7 @@
   let sortCol = 'totalSecs', sortAsc = false, filterText = '', showAll = false;
 
   function renderTable() {
-    let rows = [...data.folderRows];
+    let rows = [...(data.folderRows || [])];
     if (filterText) { rows = rows.filter(function(r) { return r.name.toLowerCase().includes(filterText); }); }
     rows.sort(function(a, b) {
       const av = a[sortCol], bv = b[sortCol];
@@ -466,9 +476,18 @@
       return sortAsc ? av - bv : bv - av;
     });
     const limited = (!showAll && !filterText) ? rows.slice(0, 10) : rows;
-    document.getElementById('toggleRows').textContent = showAll ? 'Top 10' : ('Show All (' + rows.length + ')');
-    document.getElementById('tableBody').innerHTML = limited.map(function(r) {
-      return '<tr><td>' + r.name + '</td><td>' + fmt(r.todaySecs) + '</td><td>' + fmt(r.last7Secs) +
+    const toggleBtn = document.getElementById('toggleRows');
+    if (toggleBtn) {
+      toggleBtn.textContent = showAll ? 'Top 10' : ('Show All (' + rows.length + ')');
+    }
+    const tableBody = document.getElementById('tableBody');
+    if (!tableBody) { return; }
+    if (!rows.length) {
+      tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">No projects found' + (filterText ? ' matching "' + filterText + '"' : '') + '</td></tr>';
+      return;
+    }
+    tableBody.innerHTML = limited.map(function(r) {
+      return '<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + r.name + '">' + r.name + '</td><td>' + fmt(r.todaySecs) + '</td><td>' + fmt(r.last7Secs) +
         '</td><td>' + fmt(r.rolling30Secs) + '</td><td class="lifetime">' + fmt(r.totalSecs) +
         '</td><td>' + (r.lastActive ? new Date(r.lastActive).toLocaleDateString() : '--') + '</td></tr>';
     }).join('');
@@ -487,20 +506,59 @@
       renderTable();
     });
   });
-  document.getElementById('filterInput').addEventListener('input', function(e) {
-    filterText = e.target.value.toLowerCase(); renderTable();
-  });
-  document.getElementById('toggleRows').addEventListener('click', function() {
-    showAll = !showAll; renderTable();
+
+  const filterInput = document.getElementById('filterInput');
+  if (filterInput) {
+    filterInput.addEventListener('input', function(e) {
+      filterText = e.target.value.toLowerCase();
+      renderTable();
+    });
+  }
+
+  const toggleRowsBtn = document.getElementById('toggleRows');
+  if (toggleRowsBtn) {
+    toggleRowsBtn.addEventListener('click', function() {
+      showAll = !showAll;
+      renderTable();
+    });
+  }
+
+  // Keyboard Shortcuts & Power User Hardening
+  document.addEventListener('keydown', function(e) {
+    // Esc key: Close menu dropdown
+    if (e.key === 'Escape') {
+      const menuDropdown = document.getElementById('menuDropdown');
+      const menuBtn = document.getElementById('menuBtn');
+      if (menuDropdown && !menuDropdown.classList.contains('hidden')) {
+        menuDropdown.classList.add('hidden');
+        if (menuBtn) {
+          menuBtn.setAttribute('aria-expanded', 'false');
+          menuBtn.focus();
+        }
+      }
+    }
+    // '/' key or Ctrl+F / Cmd+F: Focus search input
+    if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f')) && document.activeElement.tagName !== 'INPUT') {
+      if (filterInput) {
+        e.preventDefault();
+        filterInput.focus();
+        filterInput.select();
+      }
+    }
+    // Ctrl+S / Cmd+S: Trigger share card export
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      vscode.postMessage({ command: 'shareCard' });
+    }
   });
 
   window.addEventListener('message', function(e) {
-    if (e.data.command !== 'liveUpdate') { return; }
-    data = e.data.data;
+    if (!e.data || e.data.command !== 'liveUpdate') { return; }
+    data = e.data.data || {};
     updateCards();
     renderTable();
     // update chart data in-place without full redraw (no animation)
-    if (charts['barChart']) {
+    if (charts['barChart'] && data.folderRows) {
       var top10 = [...data.folderRows].slice(0,10);
       charts['barChart'].data.datasets[0].data = top10.map(function(r){return hrs(r.totalSecs);});
       charts['barChart'].update('none');
@@ -512,7 +570,7 @@
       });
       charts['lineChart'].update('none');
     }
-    if (charts['heatmapChart']) {
+    if (charts['heatmapChart'] && data.last30) {
       var l30dates = Object.keys(data.last30);
       charts['heatmapChart'].data.datasets.forEach(function(ds) {
         var proj = ds.label;
@@ -521,9 +579,14 @@
       charts['heatmapChart'].update('none');
     }
     var el = document.getElementById('todayTotal');
-    el.style.color = '#98c379';
-    setTimeout(function() { el.style.color = ''; }, 500);
+    if (el) {
+      el.classList.remove('live-pulse');
+      void el.offsetWidth; // trigger reflow for animation reset
+      el.classList.add('live-pulse');
+      setTimeout(function() { el.classList.remove('live-pulse'); }, 600);
+    }
   });
+
   // devBar is always off on load — never persisted
   var state = (typeof __settings !== 'undefined' && __settings) || {};
   var hidden = state.hiddenSections || {};
@@ -540,21 +603,27 @@
   }
   applySections();
 
-  document.getElementById('menuBtn').addEventListener('click', function(e) {
-    e.stopPropagation();
-    document.getElementById('menuDropdown').classList.toggle('hidden');
-  });
-  document.addEventListener('click', function() {
-    document.getElementById('menuDropdown').classList.add('hidden');
-  });
-  document.getElementById('menuDropdown').addEventListener('click', function(e) {
-    e.stopPropagation();
-  });
+  const menuBtn = document.getElementById('menuBtn');
+  const menuDropdown = document.getElementById('menuDropdown');
+  if (menuBtn && menuDropdown) {
+    menuBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isHidden = menuDropdown.classList.toggle('hidden');
+      menuBtn.setAttribute('aria-expanded', String(!isHidden));
+    });
+    document.addEventListener('click', function() {
+      menuDropdown.classList.add('hidden');
+      menuBtn.setAttribute('aria-expanded', 'false');
+    });
+    menuDropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
+
   document.querySelectorAll('.menu-item input').forEach(function(cb) {
     cb.addEventListener('change', function() {
       var s = cb.getAttribute('data-section');
       if (s === 'devBar') {
-        // devBar: toggle in-memory only, never save to disk
         hidden[s] = !cb.checked;
         applySections();
         return;
