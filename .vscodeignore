@@ -6,8 +6,17 @@ node_modules/**
 **/*.log
 coverage/**
 tmp/**
+docs/**
+scripts/**
+.agents/**
+.claude/**
+.cursor/**
+.gemini/**
+.codex/**
+.impeccable/**
 
 # keep packaged assets we actually need
 !media/dashboard.js
 !media/chart.min.js
 !media/treemap.min.js
+
