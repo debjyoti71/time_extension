@@ -80,3 +80,6 @@ scripts/heartbeat.ps1
 
 # Future Specs & Internal Plans
 docs/FUTURE_MONETIZATION_LEADERBOARD_SPEC.md
+
+# Demo & Local Sample Data
+data/
