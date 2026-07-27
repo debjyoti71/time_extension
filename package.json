@@ -1,9 +1,31 @@
 {
   "name": "dev-timekeeper",
   "displayName": "Dev Timekeeper",
-  "description": "Track coding time per file and directory, locally",
+  "description": "Private, offline-first coding time tracker with real-time webview dashboard & PNG share card generator.",
   "version": "1.0.33",
   "license": "MIT",
+  "keywords": [
+    "time tracker",
+    "coding metrics",
+    "dashboard",
+    "offline time tracker",
+    "wakatime alternative",
+    "developer productivity",
+    "analytics",
+    "active time"
+  ],
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
+  "bugs": {
+    "url": "https://github.com/debjyoti71/time_extension/issues"
+  },
+  "homepage": "https://github.com/debjyoti71/time_extension#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/debjyoti71/time_extension.git"
@@ -13,9 +35,6 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Other"
-  ],
   "activationEvents": [
     "onStartupFinished"
   ],
