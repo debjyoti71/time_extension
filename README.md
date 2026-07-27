@@ -26,25 +26,16 @@
 
 Unlike basic activity timers that continuously increment whenever VS Code is open, **Dev Timekeeper** enforces strict active-time verification.
 
-```
-                  +--------------------------+
-                  | Active Typing / Input    |
-                  +------------+-------------+
-                               |
-                               v
-                     +-------------------+
-                     |  Is System Idle?  |
-                     +---------+---------+
-                               |
-                   +-----------+-----------+
-                   |                       |
-               NO (<= 5m)              YES (> 5m)
-                   |                       |
-                   v                       v
-         +-------------------+   +-------------------+
-         | Accumulate Time   |   | Pause Session &   |
-         | & Live Status Bar |   | Flush Pending Sec |
-         +-------------------+   +-------------------+
+```mermaid
+flowchart TD
+    A["⌨️ Active Typing / Editor Input"] --> B{"Is System Idle?<br/>(No input for > 5 mins)"}
+    B -- "No (<= 5 mins)" --> C["⏱️ Accumulate Active Time<br/>& Update Status Bar"]
+    B -- "Yes (> 5 mins)" --> D["⏸️ Pause Session &<br/>Flush Pending Seconds"]
+    
+    E["💻 System Sleep / Laptop Suspended"] --> F["Measure Interval Gap Upon Wakeup"]
+    F --> G{"Gap > Flush + Idle Timeout?"}
+    G -- "Yes" --> H["🚫 Discard Elapsed Sleep Gap"]
+    G -- "No" --> C
 ```
 
 ### 1. OS-Level Idle Detection (`heartbeat.ps1`)
@@ -64,20 +55,33 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 Open the dashboard anytime by clicking the status bar item or running `Time Tracker: Show Dashboard`.
 
-```
-+-----------------------------------------------------------------------+
-|  ⏱ TIME TRACKER DASHBOARD                                     [⋮ Settings] |
-+-----------------------------------------------------------------------+
-|  [ Today: 4h 23m ] [ Yesterday: 3h 10m ] [ This Week: 24h 15m ]       |
-|  [ This Month: 92h ] [ Lifetime: 412h ]  [ Daily Avg: 3h 45m ]        |
-+-----------------------------------------------------------------------+
-|  📊 30-Day Trend Chart              |  🕒 Hour-of-Day Heatmap (00-23h) |
-|  (Stacked Area by Top 6 Projects)   |  (Peak Coding Efficiency %)     |
-+-------------------------------------+---------------------------------+
-|  📅 Weekly Stacked Activity (Last 7)|  📈 6-Month History Comparison  |
-+-------------------------------------+---------------------------------+
-|  🔠 Language Distribution Bubble Map|  📁 Full Sortable Project Table |
-+-----------------------------------------------------------------------+
+```mermaid
+graph TB
+    subgraph Dashboard["⏱️ Dev Timekeeper Live Webview Dashboard"]
+        direction TB
+        subgraph Overview["1️⃣ Executive KPI Summary Cards"]
+            KPI["Today • Yesterday • Week • Month • Lifetime • Daily Avg • Top Project"]
+        end
+        
+        subgraph AnalyticsRow1["Visual Insights (Row 1)"]
+            H["2️⃣ Hour-of-Day Productivity Heatmap<br/>(00:00 to 23:00 Peak Focus %)"]
+            T["5️⃣ 30-Day Stacked Trend Chart<br/>(Top 6 Primary Projects + Others)"]
+        end
+
+        subgraph AnalyticsRow2["Visual Insights (Row 2)"]
+            W["4️⃣ Weekly Stacked Activity<br/>(Last 7 Days Day-by-Day)"]
+            M["6️⃣ 6-Month History Comparison<br/>(Quarterly Bar Chart)"]
+        end
+
+        subgraph AnalyticsRow3["Language & Project Breakdown"]
+            L["7️⃣ Language Bubble Chart<br/>(Parsed File Extensions)"]
+            P["3️⃣ Lifetime Project Distribution<br/>(Cumulative Project Totals)"]
+        end
+
+        subgraph TableSection["Data Explorer"]
+            DT["8️⃣ Sortable File & Project Table<br/>(Search & Multi-Column Sorting)"]
+        end
+    end
 ```
 
 1. **Overview Cards**: Quick KPI summary of Today, Yesterday, This Week, Last Week, This Month, Last Month, Active Days, Daily Average, Lifetime Coding Time, and Top Project.
@@ -115,6 +119,15 @@ Transform your coding milestones into exportable PNG graphics:
 ## 🔒 Privacy & Data Security Architecture
 
 Dev Timekeeper is built around strict data privacy principles:
+
+```mermaid
+flowchart LR
+    VSCode["VS Code Active Editor"] --> Tracker["Tracking Engine"]
+    Heartbeat["PowerShell Heartbeat<br/>(heartbeat.ps1)"] --> Tracker
+    Tracker --> TempFile["data.json.tmp"]
+    TempFile --> BackupFile["data.json.backup"]
+    BackupFile --> DataFile["data.json<br/>(~/.vscode-time-tracker/)"]
+```
 
 - **Zero Cloud Calls**: No network requests, external APIs, telemetry, or remote analytics.
 - **Local Storage Directory**: All persistent records are stored in your user home directory:
