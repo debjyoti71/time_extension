@@ -3,6 +3,7 @@
   "displayName": "Dev Timekeeper",
   "description": "Track coding time per file and directory, locally",
   "version": "1.0.33",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/debjyoti-ghosh/time-tracker.git"
