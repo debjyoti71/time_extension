@@ -7,7 +7,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node", "vscode"]
+    "types": [ "node", "vscode" ]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
