@@ -1,100 +1,178 @@
 # ⏱️ Dev Timekeeper
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/debjyoti-ghosh/time-tracker.svg)](https://github.com/debjyoti-ghosh/time-tracker/issues)
+[![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time_extension.svg)](https://github.com/debjyoti71/time_extension/issues)
 [![Version](https://img.shields.io/badge/version-1.0.33-green.svg)](package.json)
-[![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#privacy--data-control)
+[![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blueviolet.svg)](https://code.visualstudio.com/)
+[![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#-privacy--data-security-architecture)
 
-Private, offline-first coding time tracker for VS Code. Records how long you work per file, project, day, and hour—no cloud, no accounts, and zero telemetry.
-
----
-
-## 🚀 Highlights
-- **100% Local & Offline**: All data lives locally in `~/.vscode-time-tracker/` (JSON format).
-- **Accurate Active Time**: Pauses after 5 minutes of system idle; ignores sleep gaps; counts terminal/browser activity while actively interacting.
-- **At-a-Glance Status Bar**: Displays real-time status (e.g., `Today: 4h 23m`) with one-click access to the full dashboard.
-- **Rich Interactive Dashboard** (8 Sections): Live stats, lifetime insights, per-project charts, weekly stack, 30-day trends, 6-month bar chart, hour-of-day activity map, language bubble chart, and full sortable details table.
-- **Hour-of-Day Insights**: Reveals percentage of each clock hour you code on average over the last 30 days.
-- **Customizable Dashboard**: Toggle any dashboard section on/off and persist your display preferences.
+> **Private, offline-first coding time tracker for VS Code.**  
+> Automatically records your active coding time per file, directory, workspace, day, and hour—with zero cloud dependencies, zero accounts, and zero telemetry.
 
 ---
 
-## ⚡ How Tracking Works
+## 🌟 Highlights & Capabilities
 
-| Situation                          | Counted?       |
-|-----------------------------------|----------------|
-| Typing/clicking in VS Code        | ✅ Yes         |
-| Testing in browser or terminal    | ✅ Yes         |
-| No input for 5+ minutes           | ❌ Paused       |
-| Laptop asleep / VS Code suspended | ❌ Not counted |
-| VS Code closed                    | ❌ No           |
-
-**Data Model (Per File)**:
-- `total`: Total active seconds.
-- `dailyTotal[YYYY-MM-DD]`: Total seconds per calendar date.
-- `dailyHours[YYYY-MM-DD][hour]`: Hourly active seconds (for peak productivity insights).
+- 🛡️ **100% Local & Offline**: All data is stored locally in `~/.vscode-time-tracker/` (JSON). No data ever leaves your computer.
+- ⚡ **Precision Idle & Sleep Detection**: Uses an OS-level background input heartbeat combined with gap-rejection algorithms so AFK time, system sleep, and laptop suspension are never counted.
+- 📊 **Rich 8-Section Live Webview Dashboard**: Real-time stats, 30-day trends, weekly stacked charts, 6-month historical comparisons, hour-of-day peak productivity heatmap, language bubble map, and sortable tables.
+- 📸 **Visual Share Card Generator**: Render and export sleek, customizable summary graphics directly to `.png` with one-click OS file manager integration.
+- 📂 **Multi-Workspace & Project Auto-Mapping**: Automatically attributes active editor files to their respective git repositories or root workspace folders, while filtering out system junk (`AppData`, `node_modules`, `site-packages`, `temp`).
+- 🎨 **Customizable Layout**: Hide or reveal dashboard sections according to your workflow preference; layout settings persist across sessions.
 
 ---
 
-## 📦 Installation
+## 🧠 How the Active Tracking Engine Works
 
-1. Download the latest `.vsix` package from [Releases](https://github.com/debjyoti-ghosh/time-tracker/releases).  
-2. In VS Code, open Extensions (`Ctrl+Shift+X` or `Cmd+Shift+X`).  
-3. Click the `...` menu (top-right of Extensions panel) → **Install from VSIX...**  
-4. Select the downloaded `.vsix` file.  
-5. Restart VS Code to complete initialization.
+Unlike basic activity timers that continuously increment whenever VS Code is open, **Dev Timekeeper** enforces strict active-time verification.
 
----
+```
+                  +--------------------------+
+                  | Active Typing / Input    |
+                  +------------+-------------+
+                               |
+                               v
+                     +-------------------+
+                     |  Is System Idle?  |
+                     +---------+---------+
+                               |
+                   +-----------+-----------+
+                   |                       |
+               NO (<= 5m)              YES (> 5m)
+                   |                       |
+                   v                       v
+         +-------------------+   +-------------------+
+         | Accumulate Time   |   | Pause Session &   |
+         | & Live Status Bar |   | Flush Pending Sec |
+         +-------------------+   +-------------------+
+```
 
-## 📊 Using the Dashboard
+### 1. OS-Level Idle Detection (`heartbeat.ps1`)
+- Runs a lightweight background process monitoring user interaction timeouts.
+- Automatically pauses active session accumulation if no keyboard or mouse input occurs for **5 minutes** (`300,000 ms`).
 
-- **Open Dashboard**: Click the status bar item or open Command Palette (`Ctrl+Shift+P`) and type `Time Tracker: Show Dashboard`.
-- **Live Updates**: Metrics update automatically every 30 seconds with active working ticks.
-- **Customize View**: Click the `⋮` settings menu in the top right to hide or reveal sections. Your choices are automatically saved to `~/.vscode-time-tracker/settings.json`.
+### 2. Suspension & Sleep Rejection
+- When your machine enters sleep mode or VS Code is suspended, the timer interval measures the gap upon wakeup.
+- If the time delta exceeds `Flush Interval + Idle Timeout`, elapsed sleep time is automatically discarded, preserving exact active coding statistics.
 
----
-
-## 📸 Snapshots (Multi-Repo Summaries)
-
-Generate shareable markdown/JSON summary reports for single or multiple repositories:
-1. Open Command Palette (`Ctrl+Shift+P`).
-2. Search for **Time Tracker: Save Snapshot (7/30/Custom, Multi-Repo)**.
-3. Snapshots are saved locally under `~/.vscode-time-tracker/snapshots/` as both structured `.json` and human-readable `.md` files.
-
----
-
-## 🐞 Raising Issues & Feedback
-
-Found a bug or have a feature idea? Contributions and community feedback are warmly welcomed!
-
-### 📥 Submit an Issue
-- 🐛 **[Report a Bug](https://github.com/debjyoti-ghosh/time-tracker/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=%5BBug%5D+)**: Describe what happened, steps to reproduce, and expected behavior.
-- 💡 **[Request a Feature](https://github.com/debjyoti-ghosh/time-tracker/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=%5BFeature%5D+)**: Suggest new dashboard sections, tracking capabilities, or UX improvements.
-- 💬 **[General Discussions / Questions](https://github.com/debjyoti-ghosh/time-tracker/issues)**: Ask questions or discuss ideas with the maintainer.
-
-Before submitting an issue, please check existing [Open Issues](https://github.com/debjyoti-ghosh/time-tracker/issues) to avoid duplicates.
+### 3. Active Window Focus Monitoring
+- Instantly pauses when VS Code loses window focus, and resumes seamless tracking when you return to your active editor.
 
 ---
 
-## 🔒 Privacy & Data Control
+## 📊 The 8 Dashboard Visual Analytics Sections
 
-- **Zero Telemetry**: No tracking scripts, analytics, or external network requests.
-- **Full Ownership**: All your data is stored locally in `~/.vscode-time-tracker/`.
-- **Data Erasure**: To reset or wipe all stored history, simply delete the `~/.vscode-time-tracker/` directory or run the command `Time Tracker: Reset All Data`.
+Open the dashboard anytime by clicking the status bar item or running `Time Tracker: Show Dashboard`.
+
+```
++-----------------------------------------------------------------------+
+|  ⏱ TIME TRACKER DASHBOARD                                     [⋮ Settings] |
++-----------------------------------------------------------------------+
+|  [ Today: 4h 23m ] [ Yesterday: 3h 10m ] [ This Week: 24h 15m ]       |
+|  [ This Month: 92h ] [ Lifetime: 412h ]  [ Daily Avg: 3h 45m ]        |
++-----------------------------------------------------------------------+
+|  📊 30-Day Trend Chart              |  🕒 Hour-of-Day Heatmap (00-23h) |
+|  (Stacked Area by Top 6 Projects)   |  (Peak Coding Efficiency %)     |
++-------------------------------------+---------------------------------+
+|  📅 Weekly Stacked Activity (Last 7)|  📈 6-Month History Comparison  |
++-------------------------------------+---------------------------------+
+|  🔠 Language Distribution Bubble Map|  📁 Full Sortable Project Table |
++-----------------------------------------------------------------------+
+```
+
+1. **Overview Cards**: Quick KPI summary of Today, Yesterday, This Week, Last Week, This Month, Last Month, Active Days, Daily Average, Lifetime Coding Time, and Top Project.
+2. **Hour-of-Day Productivity Heatmap**: Shows the percentage of each clock hour (00:00 to 23:00) spent coding over the last 30 days, helping you identify your peak focus hours.
+3. **Lifetime Per-Project Breakdown**: Comparative lifetime metrics for all active projects.
+4. **Weekly Stacked Activity**: Day-by-day stacked breakdown for the last 7 days.
+5. **30-Day Trend Chart**: Interactive stacked area chart detailing your top 6 primary projects alongside aggregated secondary projects.
+6. **6-Month History Comparison**: High-level bar chart tracking monthly totals across the last two quarters.
+7. **Language Distribution Chart**: Automatic language detection based on extension parsing (`TypeScript`, `Python`, `JavaScript`, `CSS`, `HTML`, `Go`, `Rust`, `C++`, `Java`, `SQL`, etc.).
+8. **Sortable File & Project Table**: Detailed breakdown of every project and file tracked, supporting column sorting and instant search filtering.
 
 ---
 
-## 📚 Documentation
+## 📸 Visual Share Card Generator
 
-Detailed architectural and design guides are available in the [`docs/`](docs) folder:
-- 📖 [Product Specification](docs/PRODUCT.md)
-- 📐 [Design Document](docs/DESIGN.md)
-- 🛠️ [Developer Guide](docs/DEVELOPER.md)
+Transform your coding milestones into exportable PNG graphics:
+
+1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+2. Run **`Time Tracker: Generate Share Card`**.
+3. Select projects, customize date range (Last 7 Days, Last 30 Days, or Custom), and click **Export PNG**.
+4. The extension opens a native OS Save Dialog and provides a **Show in Folder** shortcut upon save.
+
+---
+
+## ⌨️ Command Reference
+
+| Command Title | Identifier | Action |
+| --- | --- | --- |
+| **Time Tracker: Show Dashboard** | `timetracker.showDashboard` | Opens the interactive real-time Webview dashboard |
+| **Time Tracker: Generate Share Card** | `timetracker.shareCard` | Launches the share card builder & PNG exporter |
+| **Time Tracker: Reset All Data** | `timetracker.reset` | Prompts confirmation (`RESET`) and clears local data |
+
+---
+
+## 🔒 Privacy & Data Security Architecture
+
+Dev Timekeeper is built around strict data privacy principles:
+
+- **Zero Cloud Calls**: No network requests, external APIs, telemetry, or remote analytics.
+- **Local Storage Directory**: All persistent records are stored in your user home directory:
+  - Data File: `~/.vscode-time-tracker/data.json`
+  - Settings File: `~/.vscode-time-tracker/settings.json`
+  - Idle Heartbeat File: `~/.vscode-time-tracker/heartbeat.json`
+- **Atomic File Writes**: To prevent data corruption during unexpected shutdowns, storage updates write to `data.json.tmp`, backup existing data to `data.json.backup`, and perform atomic renames.
+- **Automated Junk Filtering**: Path normalization automatically excludes temporary files, virtual environments, system caches (`AppData`, `site-packages`, `temp`, `.aws`, `.zip`).
+
+---
+
+## 📦 Installation & Setup
+
+### Option 1: Install from VSIX Release (Recommended)
+1. Download the latest `.vsix` package from [Releases](https://github.com/debjyoti71/time_extension/releases).
+2. Open VS Code → Extensions tab (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+3. Click the `...` menu in the top-right corner → **Install from VSIX...**
+4. Choose the downloaded `dev-timekeeper-*.vsix` file.
+
+### Option 2: Build from Source
+```bash
+# Clone the repository
+git clone https://github.com/debjyoti71/time_extension.git
+cd time_extension
+
+# Install dependencies
+npm install
+
+# Compile TypeScript
+npm run compile
+
+# Package VSIX extension package
+npm run package:vsix
+```
+
+---
+
+## 📚 Documentation Hub
+
+For full technical documentation, architecture specs, and developer guides, explore the [`docs/`](docs) directory:
+- 📖 [Product Specification](docs/PRODUCT.md) — Feature requirements, user stories, and data schemas.
+- 📐 [Design Document](docs/DESIGN.md) — System architecture, event lifecycle, and UI component designs.
+- 🛠️ [Developer Guide](docs/DEVELOPER.md) — Local development workflow, build scripts, and testing setups.
+
+---
+
+## 🐞 Issues & Community Support
+
+Contributions, bug reports, and feature suggestions are welcome!
+
+- 🐛 **[Report a Bug](https://github.com/debjyoti71/time_extension/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=%5BBug%5D+)** — Encountered an issue? Open a bug report with reproduction steps.
+- 💡 **[Request a Feature](https://github.com/debjyoti71/time_extension/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=%5BFeature%5D+)** — Have an idea for a new dashboard chart or tracking feature? Submit a feature request.
+- 💬 **[View All Issues](https://github.com/debjyoti71/time_extension/issues)** — Browse ongoing discussions and reported issues.
 
 ---
 
 ## 📄 License & Author
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.
 
 Developed by **Debjyoti Ghosh** — [https://debjyoti-ghosh.in/](https://debjyoti-ghosh.in/)
