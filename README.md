@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time_extension.svg)](https://github.com/debjyoti71/time_extension/issues)
-[![Version](https://img.shields.io/badge/version-1.0.33-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.0.34-green.svg)](package.json)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blueviolet.svg)](https://code.visualstudio.com/)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#-privacy--data-security-architecture)
 

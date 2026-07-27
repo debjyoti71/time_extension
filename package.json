@@ -2,7 +2,7 @@
   "name": "dev-timekeeper",
   "displayName": "Dev Timekeeper",
   "description": "Private, offline-first coding time tracker with real-time webview dashboard & PNG share card generator.",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "license": "MIT",
   "keywords": [
     "time tracker",
