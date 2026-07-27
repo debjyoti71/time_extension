@@ -1,7 +1,7 @@
 # ⏱️ Dev Timekeeper
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time-tracker.svg)](https://github.com/debjyoti71/time-tracker/issues)
+[![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time_extension.svg)](https://github.com/debjyoti71/time_extension/issues)
 [![Version](https://img.shields.io/badge/version-1.0.33-green.svg)](package.json)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#privacy--data-control)
 
