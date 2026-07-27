@@ -28,26 +28,34 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 ```mermaid
 flowchart TD
-    A["⌨️ Active Typing / Editor Input"] --> B{"Is System Idle?<br/>(No input for > 5 mins)"}
-    B -- "No (<= 5 mins)" --> C["⏱️ Accumulate Active Time<br/>& Update Status Bar"]
-    B -- "Yes (> 5 mins)" --> D["⏸️ Pause Session &<br/>Flush Pending Seconds"]
+    A["⌨️ VS Code Activity<br/>(Typing, Tab Switches, Edits)"] --> B{"Is VS Code Window<br/>Minimized or Unfocused?"}
     
-    E["💻 System Sleep / Laptop Suspended"] --> F["Measure Interval Gap Upon Wakeup"]
-    F --> G{"Gap > Flush + Idle Timeout?"}
-    G -- "Yes" --> H["🚫 Discard Elapsed Sleep Gap"]
-    G -- "No" --> C
+    B -- "Focused & Active" --> C{"Is System Idle?<br/>(OS input > 5 mins)"}
+    C -- "No (<= 5m)" --> D["⏱️ Accumulate Active Time<br/>& Update Status Bar"]
+    C -- "Yes (> 5m)" --> E["⏸️ Pause Session &<br/>Flush Pending Seconds"]
+    
+    B -- "Unfocused / Browser Testing" --> F{"Time Since Last VS Code<br/>Interaction > 20 mins?"}
+    F -- "No (<= 20m Grace Period)" --> D
+    F -- "Yes (> 20m Timeout)" --> E
+
+    G["💻 System Sleep / Laptop Suspended"] --> H["Measure Interval Gap Upon Wakeup"]
+    H --> I{"Gap > Flush + Idle Timeout?"}
+    I -- "Yes" --> J["🚫 Discard Elapsed Sleep Gap"]
+    I -- "No" --> D
 ```
 
-### 1. OS-Level Idle Detection (`heartbeat.ps1`)
-- Runs a lightweight background process monitoring user interaction timeouts.
-- Automatically pauses active session accumulation if no keyboard or mouse input occurs for **5 minutes** (`300,000 ms`).
+### 1. OS-Level Idle Detection (`scripts/heartbeat.ps1`)
+- Runs a lightweight background process monitoring user interaction timeouts via Win32 `GetLastInputInfo`.
+- Automatically pauses active session accumulation if no system-wide keyboard or mouse input occurs for **5 minutes** (`300,000 ms`).
 
-### 2. Suspension & Sleep Rejection
-- When your machine enters sleep mode or VS Code is suspended, the timer interval measures the gap upon wakeup.
-- If the time delta exceeds `Flush Interval + Idle Timeout`, elapsed sleep time is automatically discarded, preserving exact active coding statistics.
+### 2. 20-Minute VS Code Inactivity Hard Limit
+- Tracks continuous interaction timestamps for keystrokes, editor selections, tab switches, file saves, and agent code edits.
+- **Browser Testing Grace Period**: Allows up to **20 minutes** of testing outside VS Code (e.g. in Chrome or terminal).
+- **Auto-Pause**: If **20 minutes pass without any VS Code interaction**, tracking automatically pauses.
 
-### 3. Active Window Focus Monitoring
-- Instantly pauses when VS Code loses window focus, and resumes seamless tracking when you return to your active editor.
+### 3. Window Minimization & Sleep Rejection
+- Immediately pauses active session accumulation when VS Code is minimized or loses focus to prevent sleep time leakage.
+- When your machine enters sleep mode or VS Code is suspended, elapsed sleep time is automatically discarded upon wakeup.
 
 ---
 
