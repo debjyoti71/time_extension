@@ -77,3 +77,6 @@ scripts/cleanup.py
 scripts/migrate.py
 scripts/print_data.py
 scripts/heartbeat.ps1
+
+# Future Specs & Internal Plans
+docs/FUTURE_MONETIZATION_LEADERBOARD_SPEC.md
