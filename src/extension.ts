@@ -1,3 +1,4 @@
+// Dev Timekeeper Extension Entrypoint
 import * as vscode from 'vscode';
 import * as tracker from './tracker';
 import * as statusBar from './statusBar';
