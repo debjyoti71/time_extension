@@ -1,12 +1,78 @@
+# Dependencies
 node_modules/
+
+# TypeScript & Build Outputs
 out/
-*.vsix
+dist/
 *.js.map
+*.tsbuildinfo
+
+# VS Code Extension Packaging & Testing
+*.vsix
 .vscode-test/
+
+# Python (Scripts & Virtual Environments)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.pyc
+
+# Logs & Temporary Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+tmp/
+temp/
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDE & Editor Local Files
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# AI Assistant & Local Workbench Folders
+.agents/
+.claude/
+.cursor/
+.gemini/
+.codex/
+.github/
+.impeccable/
+
+# Local Archives & Experimental Labs
 card-lab/
-.claude
-.agents
-.cursor
-.gemini
-.github
-.codex
+1.0-version/
+1.0-version antigravity/
+
+# Private Local Utility Scripts (Keep build script sync-version-from-git.mjs tracked)
+scripts/cleanup.py
+scripts/migrate.py
+scripts/print_data.py
+scripts/heartbeat.ps1
