@@ -63,7 +63,8 @@ desktop.ini
 .cursor/
 .gemini/
 .codex/
-.github/
+.github/*
+!.github/workflows/
 .impeccable/
 
 # Local Archives & Experimental Labs
