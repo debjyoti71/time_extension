@@ -140,7 +140,8 @@ npm run package:vsix
 
 ## 📚 Documentation Hub
 
-For full technical documentation, architecture specs, and developer guides, explore the [`docs/`](docs) directory:
+For full technical documentation, architecture specs, and feature guides, explore the project documentation:
+- ✨ [Features Specification](FEATURES.md) — Detailed feature showcase, Webview dashboard breakdown, and settings reference.
 - 📖 [Product Specification](docs/PRODUCT.md) — Feature requirements, user stories, and data schemas.
 - 📐 [Design Document](docs/DESIGN.md) — System architecture, event lifecycle, and UI component designs.
 - 🛠️ [Developer Guide](docs/DEVELOPER.md) — Local development workflow, build scripts, and testing setups.

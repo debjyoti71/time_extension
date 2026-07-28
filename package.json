@@ -43,17 +43,43 @@
     "commands": [
       {
         "command": "timetracker.showDashboard",
-        "title": "Time Tracker: Show Dashboard"
+        "title": "Show Dashboard",
+        "category": "Time Tracker",
+        "icon": "$(dashboard)"
       },
       {
         "command": "timetracker.shareCard",
-        "title": "Time Tracker: Generate Share Card"
+        "title": "Generate Share Card",
+        "category": "Time Tracker",
+        "icon": "$(graph-line)"
       },
       {
         "command": "timetracker.reset",
-        "title": "Time Tracker: Reset All Data"
+        "title": "Reset All Data",
+        "category": "Time Tracker",
+        "icon": "$(clear-all)"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Dev Timekeeper",
+      "properties": {
+        "timetracker.idleTimeoutMinutes": {
+          "type": "number",
+          "default": 5,
+          "description": "System-wide idle timeout (in minutes) before pausing active time tracking."
+        },
+        "timetracker.inactivityHardLimitMinutes": {
+          "type": "number",
+          "default": 20,
+          "description": "VS Code editor inactivity limit (in minutes) before pausing active session."
+        },
+        "timetracker.showStatusBarItem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the active coding time indicator in the status bar."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",
