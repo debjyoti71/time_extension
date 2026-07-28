@@ -22,6 +22,7 @@ env/
 
 # Logs & Temporary Files
 *.log
+RELEASE_NOTES.md
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
