@@ -2,7 +2,7 @@
   "name": "dev-timekeeper",
   "displayName": "Dev Timekeeper",
   "description": "Private, offline-first coding time tracker with real-time webview dashboard & PNG share card generator.",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "license": "MIT",
   "keywords": [
     "time tracker",
@@ -85,6 +85,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "version:from-git": "node scripts/sync-version-from-git.mjs",
+    "release:notes": "node scripts/extract-release-notes.mjs",
     "package:vsix": "npm run version:from-git && npm run compile && npx --yes @vscode/vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
   },
