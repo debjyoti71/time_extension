@@ -770,7 +770,8 @@
     canvas.width = W * SC;
     canvas.height = H * SC;
     canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    canvas.style.maxWidth = '100%';
+    canvas.style.height = 'auto';
     ctx.scale(SC, SC);
 
     ctx.clearRect(0,0,W,H);

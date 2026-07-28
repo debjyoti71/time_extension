@@ -35,6 +35,8 @@ body {
   display: flex;
   height: 100%;
   width: 100%;
+  container-type: inline-size;
+  container-name: builder;
 }
 
 /* Sidebar Controls */
@@ -46,6 +48,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  transition: width var(--transition-fast);
 }
 
 .controls-header {
@@ -94,10 +97,12 @@ body {
 .layout-picker {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .layout-btn {
   flex: 1;
+  min-width: 70px;
   background: var(--bg-main);
   border: 1px solid var(--border-interactive);
   border-radius: var(--radius-md);
@@ -324,9 +329,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: clamp(16px, 3vw, 40px);
   overflow: auto;
   position: relative;
+  min-width: 0;
   background-image: 
     linear-gradient(45deg, #141418 25%, transparent 25%), 
     linear-gradient(-45deg, #141418 25%, transparent 25%),
@@ -337,9 +343,92 @@ body {
 }
 
 canvas {
+  max-width: 100%;
+  height: auto !important;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
   border-radius: 16px;
   transition: opacity 0.2s ease;
+  object-fit: contain;
+}
+
+/* Container Queries & Media Queries for Responsive Reflowing */
+@container builder (max-width: 768px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .builder {
+    flex-direction: column-reverse;
+    height: auto;
+    min-height: 100vh;
+  }
+  .controls {
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    overflow-y: visible;
+  }
+  .preview-panel {
+    width: 100%;
+    min-height: 360px;
+    padding: 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .builder {
+    flex-direction: column-reverse;
+    height: auto;
+    min-height: 100vh;
+  }
+  .controls {
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    overflow-y: visible;
+  }
+  .preview-panel {
+    width: 100%;
+    min-height: 360px;
+    padding: 20px 16px;
+  }
+}
+
+/* Touch Input & High Precision Pointer Queries */
+@media (pointer: coarse) {
+  .layout-btn,
+  .download-btn,
+  .select,
+  .project-search-input {
+    min-height: 44px;
+  }
+  .radio-item {
+    padding: 6px 0;
+    min-height: 44px;
+  }
+}
+
+/* Motion Sensitivity (a11y) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Focus Ring Accessibility */
@@ -347,3 +436,4 @@ canvas {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
