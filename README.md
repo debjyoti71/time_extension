@@ -28,7 +28,7 @@
 
 Unlike basic activity timers that continuously increment whenever VS Code is open, **Dev Timekeeper** enforces strict active-time verification.
 
-![Active Tracking Verification Engine Architecture](media/tracking-engine.svg)
+![Active Tracking Verification Engine Architecture](media/tracking-engine.png)
 
 ### 1. OS-Level Idle Detection (`scripts/heartbeat.ps1`)
 - Runs a lightweight background process monitoring user interaction timeouts via Win32 `GetLastInputInfo`.
@@ -49,7 +49,7 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 Open the dashboard anytime by clicking the status bar item or running `Time Tracker: Show Dashboard`.
 
-![Dashboard Visual Analytics Architecture](media/dashboard-sections.svg)
+![Dashboard Visual Analytics Architecture](media/dashboard-sections.png)
 
 1. **Overview Cards**: Quick KPI summary of Today, Yesterday, This Week, Last Week, This Month, Last Month, Active Days, Daily Average, Lifetime Coding Time, and Top Project.
 2. **Hour-of-Day Productivity Heatmap**: Shows the percentage of each clock hour (00:00 to 23:00) spent coding over the last 30 days, helping you identify your peak focus hours.
@@ -87,7 +87,7 @@ Transform your coding milestones into exportable PNG graphics:
 
 Dev Timekeeper is built around strict data privacy principles:
 
-![Privacy and Data Security Storage Pipeline](media/privacy-architecture.svg)
+![Privacy and Data Security Storage Pipeline](media/privacy-architecture.png)
 
 - **Zero Cloud Calls**: No network requests, external APIs, telemetry, or remote analytics.
 - **Local Storage Directory**: All persistent records are stored in your user home directory:

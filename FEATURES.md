@@ -12,7 +12,7 @@
 
 Unlike basic activity timers that continuously increment whenever VS Code is open, **Dev Timekeeper** uses multi-layered active-time verification.
 
-![Active Tracking Verification Engine Architecture](media/tracking-engine.svg)
+![Active Tracking Verification Engine Architecture](media/tracking-engine.png)
 
 ### Key Tracking Capabilities:
 - **OS-Level Idle Detection**: Lightweight background process (`scripts/heartbeat.ps1`) monitoring Win32 `GetLastInputInfo` system input timeouts. Pauses tracking after **5 minutes** of no keyboard or mouse movement across the operating system.
@@ -26,7 +26,7 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 Access the real-time analytics dashboard anytime by clicking the status bar item or executing `Time Tracker: Show Dashboard`. Powered by CSS Container Queries, the dashboard fluidly reflows multi-column stat cards, dual-chart rows, pie chart legends, and file tables across narrow sidebars, split editor panes, and full-screen webview tabs.
 
-![Dashboard Visual Analytics Architecture](media/dashboard-sections.svg)
+![Dashboard Visual Analytics Architecture](media/dashboard-sections.png)
 
 ### Dashboard Sections & Features:
 
@@ -62,7 +62,7 @@ Transform coding milestones into exportable, sleek PNG graphics for social shari
 
 ## 🔒 100% Local & Private Data Architecture
 
-![Privacy and Data Security Storage Pipeline](media/privacy-architecture.svg)
+![Privacy and Data Security Storage Pipeline](media/privacy-architecture.png)
 
 - **Zero Network Activity**: No cloud servers, external API calls, telemetry, or tracking scripts.
 - **Local Storage Files**: Persistent records are saved in `~/.vscode-time-tracker/`:
