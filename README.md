@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time_extension.svg)](https://github.com/debjyoti71/time_extension/issues)
-[![Version](https://img.shields.io/badge/version-1.0.34-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.0.35-green.svg)](package.json)
 [![Open VSX](https://img.shields.io/open-vsx/v/DebjyotiGhosh/dev-timekeeper.svg?color=blue)](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
 [![Open VSX Downloads](https://img.shields.io/open-vsx/dt/DebjyotiGhosh/dev-timekeeper.svg?color=brightgreen)](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blueviolet.svg)](https://code.visualstudio.com/)
@@ -17,7 +17,7 @@
 
 - 🛡️ **100% Local & Offline**: All data is stored locally in `~/.vscode-time-tracker/` (JSON). No data ever leaves your computer.
 - ⚡ **Precision Idle & Sleep Detection**: Uses an OS-level background input heartbeat combined with gap-rejection algorithms so AFK time, system sleep, and laptop suspension are never counted.
-- 📊 **Rich 8-Section Live Webview Dashboard**: Real-time stats, 30-day trends, weekly stacked charts, 6-month historical comparisons, hour-of-day peak productivity heatmap, language bubble map, and sortable tables.
+- 📊 **Fluid Responsive 8-Section Dashboard**: Powered by CSS Container Queries, auto-reflowing stats, 30-day trends, weekly stacked charts, 6-month historical comparisons, peak productivity heatmap, language bubble map, and sortable tables.
 - 📸 **Visual Share Card Generator**: Render and export sleek, customizable summary graphics directly to `.png` with one-click OS file manager integration.
 - 📂 **Multi-Workspace & Project Auto-Mapping**: Automatically attributes active editor files to their respective git repositories or root workspace folders, while filtering out system junk (`AppData`, `node_modules`, `site-packages`, `temp`).
 - 🎨 **Customizable Layout**: Hide or reveal dashboard sections according to your workflow preference; layout settings persist across sessions.

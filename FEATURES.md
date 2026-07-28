@@ -24,7 +24,7 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 ## 📊 8-Section Live Webview Dashboard
 
-Access the real-time analytics dashboard anytime by clicking the status bar item or executing `Time Tracker: Show Dashboard`.
+Access the real-time analytics dashboard anytime by clicking the status bar item or executing `Time Tracker: Show Dashboard`. Powered by CSS Container Queries, the dashboard fluidly reflows multi-column stat cards, dual-chart rows, pie chart legends, and file tables across narrow sidebars, split editor panes, and full-screen webview tabs.
 
 ![Dashboard Visual Analytics Architecture](media/dashboard-sections.svg)
 

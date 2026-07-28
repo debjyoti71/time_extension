@@ -4,6 +4,18 @@ All notable changes to **Dev Timekeeper** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.35] - 2026-07-28
+
+### Changed
+- **Fluid Container-Query Dashboard Layout**: Implemented CSS Container Queries (`@container dashboard`) so stat cards, chart rows, pie chart legends, and tabular data dynamically reflow when VS Code sidebars or split editor windows are resized.
+
+### Fixed
+- **Narrow Viewport & Mobile Overflow**: Resolved fixed 4-column card grid and side-by-side chart squishing by introducing responsive 2-column/1-column breakpoints and flexible flex wrapping.
+- **SVG Language Map Resizing**: Added debounced window resize handler in `dashboard.js` to automatically recalculate SVG language bubble map bounds on window or webview resize.
+- **Touch Target & Accessibility Hardening**: Increased hit targets to 44px minimum for touch pointers and added full WCAG AA contrast & `prefers-reduced-motion` animation compliance.
+
+---
+
 ## [1.0.34] - 2026-07-27
 
 ### Fixed

@@ -642,4 +642,15 @@
     });
   }
 
+  // Debounced window resize handler for bubble chart re-layout
+  var resizeTimer;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function() {
+      if (typeof drawBubbles === 'function') {
+        drawBubbles();
+      }
+    }, 200);
+  });
+
 })();
