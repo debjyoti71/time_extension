@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 240" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #181825; rx: 16px; }
+      .card { fill: #1e1e2e; stroke: #313244; stroke-width: 1.5; rx: 10px; }
+      .card-blue { fill: #1e1e2e; stroke: #89b4fa; stroke-width: 2; rx: 10px; }
+      .card-teal { fill: #1e1e2e; stroke: #89dceb; stroke-width: 2; rx: 10px; }
+      .card-purple { fill: #251e30; stroke: #cba6f7; stroke-width: 2; rx: 10px; }
+      .card-yellow { fill: #2b2519; stroke: #f9e2af; stroke-width: 1.5; rx: 10px; }
+      .card-peach { fill: #2c201a; stroke: #fab387; stroke-width: 1.5; rx: 10px; }
+      .card-green { fill: #11261f; stroke: #a6e3a1; stroke-width: 2; rx: 10px; }
+      .header-title { fill: #a6e3a1; font-family: system-ui, -apple-system, sans-serif; font-size: 19px; font-weight: 700; }
+      .title { fill: #cdd6f4; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; }
+      .subtext { fill: #a6adc8; font-family: system-ui, -apple-system, sans-serif; font-size: 11px; }
+      .flow-line { stroke: #585b70; stroke-width: 2; fill: none; stroke-linecap: round; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#89b4fa" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a6e3a1" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" class="bg" />
+
+  <!-- Header -->
+  <text x="440" y="38" text-anchor="middle" class="header-title">🔒 100% Local &amp; Private Storage Pipeline</text>
+
+  <!-- Inputs -->
+  <rect x="30" y="65" width="160" height="60" class="card-blue" />
+  <text x="110" y="90" text-anchor="middle" class="title">VS Code Editor</text>
+  <text x="110" y="108" text-anchor="middle" class="subtext">Active File &amp; Events</text>
+
+  <rect x="30" y="145" width="160" height="60" class="card-teal" />
+  <text x="110" y="170" text-anchor="middle" class="title">Win32 Heartbeat</text>
+  <text x="110" y="188" text-anchor="middle" class="subtext">GetLastInputInfo</text>
+
+  <!-- Flow to Engine -->
+  <path d="M 190 95 L 240 125" class="flow-line" marker-end="url(#arrow)" />
+  <path d="M 190 175 L 240 145" class="flow-line" marker-end="url(#arrow)" />
+
+  <!-- Tracking Engine -->
+  <rect x="240" y="100" width="150" height="70" class="card-purple" />
+  <text x="315" y="130" text-anchor="middle" class="title" fill="#cba6f7">Tracking Engine</text>
+  <text x="315" y="150" text-anchor="middle" class="subtext">Active Verification</text>
+
+  <!-- Flow Engine -> Temp -->
+  <path d="M 390 135 L 430 135" class="flow-line" marker-end="url(#arrow)" />
+
+  <!-- Atomic Write Chain -->
+  <rect x="430" y="105" width="125" height="60" class="card-yellow" />
+  <text x="492" y="132" text-anchor="middle" class="title" fill="#f9e2af">data.json.tmp</text>
+  <text x="492" y="150" text-anchor="middle" class="subtext">1. Atomic Write</text>
+
+  <path d="M 555 135 L 590 135" class="flow-line" marker-end="url(#arrow)" />
+
+  <rect x="590" y="105" width="130" height="60" class="card-peach" />
+  <text x="655" y="132" text-anchor="middle" class="title" fill="#fab387">data.json.backup</text>
+  <text x="655" y="150" text-anchor="middle" class="subtext">2. Safe Backup</text>
+
+  <path d="M 720 135 L 755 135" class="flow-line" marker-end="url(#arrow-green)" />
+
+  <rect x="755" y="100" width="105" height="70" class="card-green" />
+  <text x="807" y="130" text-anchor="middle" class="title" fill="#a6e3a1">data.json</text>
+  <text x="807" y="150" text-anchor="middle" class="subtext">3. Atomic Swap</text>
+</svg>

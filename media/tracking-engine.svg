@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #181825; rx: 16px; }
+      .card { fill: #1e1e2e; stroke: #313244; stroke-width: 1.5; rx: 10px; }
+      .card-accent-blue { fill: #1e1e2e; stroke: #89b4fa; stroke-width: 2; rx: 10px; }
+      .card-accent-green { fill: #11261f; stroke: #a6e3a1; stroke-width: 2; rx: 10px; }
+      .card-accent-amber { fill: #2b2519; stroke: #f9e2af; stroke-width: 2; rx: 10px; }
+      .card-accent-red { fill: #2c1a1d; stroke: #f38ba8; stroke-width: 2; rx: 10px; }
+      .card-accent-purple { fill: #251e30; stroke: #cba6f7; stroke-width: 2; rx: 10px; }
+      .title { fill: #cdd6f4; font-family: system-ui, -apple-system, sans-serif; font-size: 15px; font-weight: 600; }
+      .subtext { fill: #a6adc8; font-family: system-ui, -apple-system, sans-serif; font-size: 12px; }
+      .label-green { fill: #a6e3a1; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; }
+      .label-amber { fill: #f9e2af; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; }
+      .label-red { fill: #f38ba8; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; }
+      .arrow-text { fill: #89b4fa; font-family: system-ui, -apple-system, sans-serif; font-size: 11px; font-weight: 600; }
+      .flow-line { stroke: #585b70; stroke-width: 2; fill: none; stroke-linecap: round; }
+      .flow-line-green { stroke: #a6e3a1; stroke-width: 2; fill: none; stroke-dasharray: 4; }
+      .flow-line-amber { stroke: #f9e2af; stroke-width: 2; fill: none; stroke-dasharray: 4; }
+      .header-title { fill: #89b4fa; font-family: system-ui, -apple-system, sans-serif; font-size: 20px; font-weight: 700; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#89b4fa" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a6e3a1" />
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f9e2af" />
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f38ba8" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" class="bg" />
+
+  <!-- Diagram Title -->
+  <text x="440" y="40" text-anchor="middle" class="header-title">🧠 Active Tracking Verification Lifecycle</text>
+
+  <!-- Node A: VS Code Activity -->
+  <rect x="50" y="75" width="230" height="70" class="card-accent-blue" />
+  <text x="165" y="103" text-anchor="middle" class="title">⌨️ VS Code Activity</text>
+  <text x="165" y="125" text-anchor="middle" class="subtext">Typing, Tab Switches, Edits</text>
+
+  <!-- Connector A -> B -->
+  <path d="M 165 145 L 165 190" class="flow-line" marker-end="url(#arrow)" />
+
+  <!-- Node B: Is VS Code Window Minimized? -->
+  <rect x="50" y="190" width="230" height="75" class="card" />
+  <text x="165" y="218" text-anchor="middle" class="title">Is VS Code Window</text>
+  <text x="165" y="238" text-anchor="middle" class="title">Focused &amp; Active?</text>
+
+  <!-- Connector B -> C (Focused & Active) -->
+  <path d="M 280 227 L 350 227" class="flow-line" marker-end="url(#arrow)" />
+  <text x="315" y="218" text-anchor="middle" class="arrow-text">Yes</text>
+
+  <!-- Node C: Is System Idle? -->
+  <rect x="350" y="190" width="220" height="75" class="card" />
+  <text x="460" y="218" text-anchor="middle" class="title">Is System Idle?</text>
+  <text x="460" y="238" text-anchor="middle" class="subtext">OS input &gt; 5 mins</text>
+
+  <!-- Connector C -> D (No: System active) -->
+  <path d="M 570 227 L 640 227" class="flow-line" marker-end="url(#arrow-green)" />
+  <text x="605" y="218" text-anchor="middle" class="label-green">No (≤ 5m)</text>
+
+  <!-- Node D: Accumulate Active Time -->
+  <rect x="640" y="190" width="200" height="75" class="card-accent-green" />
+  <text x="740" y="222" text-anchor="middle" class="label-green">⏱️ Accumulate Time</text>
+  <text x="740" y="242" text-anchor="middle" class="subtext">&amp; Update Status Bar</text>
+
+  <!-- Connector C -> E (Yes: Idle) -->
+  <path d="M 460 265 L 460 340" class="flow-line" marker-end="url(#arrow-amber)" />
+  <text x="495" y="300" text-anchor="middle" class="label-amber">Yes (&gt; 5m)</text>
+
+  <!-- Node E: Pause Session & Flush -->
+  <rect x="360" y="340" width="200" height="75" class="card-accent-amber" />
+  <text x="460" y="372" text-anchor="middle" class="label-amber">⏸️ Pause Session</text>
+  <text x="460" y="392" text-anchor="middle" class="subtext">Flush Pending Seconds</text>
+
+  <!-- Connector B -> F (Unfocused / Browser Testing) -->
+  <path d="M 165 265 L 165 340" class="flow-line" marker-end="url(#arrow)" />
+  <text x="175" y="300" text-anchor="start" class="arrow-text">Unfocused / Testing</text>
+
+  <!-- Node F: Browser Grace Period (20 mins) -->
+  <rect x="50" y="340" width="230" height="75" class="card-accent-purple" />
+  <text x="165" y="368" text-anchor="middle" class="title">Browser Grace Period</text>
+  <text x="165" y="388" text-anchor="middle" class="subtext">Inactivity &gt; 20 mins?</text>
+
+  <!-- Connector F -> D (<= 20m Grace Period) -->
+  <path d="M 280 377 L 740 377 L 740 265" class="flow-line-green" marker-end="url(#arrow-green)" />
+  <text x="315" y="368" text-anchor="middle" class="label-green">No (≤ 20m)</text>
+
+  <!-- Connector F -> E (> 20m Timeout) -->
+  <path d="M 165 415 L 165 480 L 460 480 L 460 415" class="flow-line-amber" marker-end="url(#arrow-amber)" />
+  <text x="210" y="465" text-anchor="middle" class="label-amber">Yes (&gt; 20m Timeout)</text>
+
+  <!-- System Sleep Branch -->
+  <rect x="630" y="435" width="220" height="75" class="card-accent-red" />
+  <text x="740" y="463" text-anchor="middle" class="label-red">💻 Laptop Sleep / Suspend</text>
+  <text x="740" y="483" text-anchor="middle" class="subtext">🚫 Discard Elapsed Sleep Gap</text>
+</svg>

@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/debjyoti71/time_extension.svg)](https://github.com/debjyoti71/time_extension/issues)
 [![Version](https://img.shields.io/badge/version-1.0.34-green.svg)](package.json)
+[![Open VSX](https://img.shields.io/open-vsx/v/DebjyotiGhosh/dev-timekeeper.svg?color=blue)](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/DebjyotiGhosh/dev-timekeeper.svg?color=brightgreen)](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blueviolet.svg)](https://code.visualstudio.com/)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#-privacy--data-security-architecture)
 
@@ -26,23 +28,7 @@
 
 Unlike basic activity timers that continuously increment whenever VS Code is open, **Dev Timekeeper** enforces strict active-time verification.
 
-```mermaid
-flowchart TD
-    A["⌨️ VS Code Activity<br/>(Typing, Tab Switches, Edits)"] --> B{"Is VS Code Window<br/>Minimized or Unfocused?"}
-    
-    B -- "Focused & Active" --> C{"Is System Idle?<br/>(OS input > 5 mins)"}
-    C -- "No (<= 5m)" --> D["⏱️ Accumulate Active Time<br/>& Update Status Bar"]
-    C -- "Yes (> 5m)" --> E["⏸️ Pause Session &<br/>Flush Pending Seconds"]
-    
-    B -- "Unfocused / Browser Testing" --> F{"Time Since Last VS Code<br/>Interaction > 20 mins?"}
-    F -- "No (<= 20m Grace Period)" --> D
-    F -- "Yes (> 20m Timeout)" --> E
-
-    G["💻 System Sleep / Laptop Suspended"] --> H["Measure Interval Gap Upon Wakeup"]
-    H --> I{"Gap > Flush + Idle Timeout?"}
-    I -- "Yes" --> J["🚫 Discard Elapsed Sleep Gap"]
-    I -- "No" --> D
-```
+![Active Tracking Verification Engine Architecture](media/tracking-engine.svg)
 
 ### 1. OS-Level Idle Detection (`scripts/heartbeat.ps1`)
 - Runs a lightweight background process monitoring user interaction timeouts via Win32 `GetLastInputInfo`.
@@ -63,34 +49,7 @@ flowchart TD
 
 Open the dashboard anytime by clicking the status bar item or running `Time Tracker: Show Dashboard`.
 
-```mermaid
-graph TB
-    subgraph Dashboard["⏱️ Dev Timekeeper Live Webview Dashboard"]
-        direction TB
-        subgraph Overview["1️⃣ Executive KPI Summary Cards"]
-            KPI["Today • Yesterday • Week • Month • Lifetime • Daily Avg • Top Project"]
-        end
-        
-        subgraph AnalyticsRow1["Visual Insights (Row 1)"]
-            H["2️⃣ Hour-of-Day Productivity Heatmap<br/>(00:00 to 23:00 Peak Focus %)"]
-            T["5️⃣ 30-Day Stacked Trend Chart<br/>(Top 6 Primary Projects + Others)"]
-        end
-
-        subgraph AnalyticsRow2["Visual Insights (Row 2)"]
-            W["4️⃣ Weekly Stacked Activity<br/>(Last 7 Days Day-by-Day)"]
-            M["6️⃣ 6-Month History Comparison<br/>(Quarterly Bar Chart)"]
-        end
-
-        subgraph AnalyticsRow3["Language & Project Breakdown"]
-            L["7️⃣ Language Bubble Chart<br/>(Parsed File Extensions)"]
-            P["3️⃣ Lifetime Project Distribution<br/>(Cumulative Project Totals)"]
-        end
-
-        subgraph TableSection["Data Explorer"]
-            DT["8️⃣ Sortable File & Project Table<br/>(Search & Multi-Column Sorting)"]
-        end
-    end
-```
+![Dashboard Visual Analytics Architecture](media/dashboard-sections.svg)
 
 1. **Overview Cards**: Quick KPI summary of Today, Yesterday, This Week, Last Week, This Month, Last Month, Active Days, Daily Average, Lifetime Coding Time, and Top Project.
 2. **Hour-of-Day Productivity Heatmap**: Shows the percentage of each clock hour (00:00 to 23:00) spent coding over the last 30 days, helping you identify your peak focus hours.
@@ -128,14 +87,7 @@ Transform your coding milestones into exportable PNG graphics:
 
 Dev Timekeeper is built around strict data privacy principles:
 
-```mermaid
-flowchart LR
-    VSCode["VS Code Active Editor"] --> Tracker["Tracking Engine"]
-    Heartbeat["PowerShell Heartbeat<br/>(heartbeat.ps1)"] --> Tracker
-    Tracker --> TempFile["data.json.tmp"]
-    TempFile --> BackupFile["data.json.backup"]
-    BackupFile --> DataFile["data.json<br/>(~/.vscode-time-tracker/)"]
-```
+![Privacy and Data Security Storage Pipeline](media/privacy-architecture.svg)
 
 - **Zero Cloud Calls**: No network requests, external APIs, telemetry, or remote analytics.
 - **Local Storage Directory**: All persistent records are stored in your user home directory:
@@ -149,13 +101,26 @@ flowchart LR
 
 ## 📦 Installation & Setup
 
-### Option 1: Install from VSIX Release (Recommended)
-1. Download the latest `.vsix` package from [Releases](https://github.com/debjyoti71/time_extension/releases).
-2. Open VS Code → Extensions tab (`Ctrl+Shift+X` / `Cmd+Shift+X`).
-3. Click the `...` menu in the top-right corner → **Install from VSIX...**
-4. Choose the downloaded `dev-timekeeper-*.vsix` file.
+### Option 1: Install from Open VSX Registry (Recommended for VSCodium / VS Code / Cursor / Gitpod)
+1. Search for **`Dev Timekeeper`** (`DebjyotiGhosh.dev-timekeeper`) in your editor's Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+2. Click **Install**.
+3. Direct Registry Link: [open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
 
-### Option 2: Build from Source
+```bash
+# VSCodium / Open VSX CLI
+codium --install-extension DebjyotiGhosh.dev-timekeeper
+
+# VS Code CLI
+code --install-extension DebjyotiGhosh.dev-timekeeper
+```
+
+### Option 2: Install from VSIX Release
+1. Download the latest `.vsix` package from [Open VSX Registry](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper) or [GitHub Releases](https://github.com/debjyoti71/time_extension/releases).
+2. Open VS Code / VSCodium → Extensions tab (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+3. Click the `...` menu in the top-right corner → **Install from VSIX...**
+4. Choose the downloaded `DebjyotiGhosh.dev-timekeeper-*.vsix` file.
+
+### Option 3: Build from Source
 ```bash
 # Clone the repository
 git clone https://github.com/debjyoti71/time_extension.git
