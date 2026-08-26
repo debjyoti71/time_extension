@@ -293,7 +293,19 @@
         responsive: true,
         interaction: { mode: 'index', intersect: false, axis: 'x' },
         plugins: {
-          legend: { labels: { color: TICK, boxWidth: 12, font: { size: 11 } } },
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              color: TICK,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              boxWidth: 6,
+              boxHeight: 6,
+              padding: 10,
+              font: { size: 10 }
+            }
+          },
           tooltip: {
             filter: function(item) { return item.parsed.y > 0; },
             callbacks: {
@@ -311,8 +323,8 @@
           }
         },
         scales: {
-          x: { stacked: true, ticks: { color: TICK }, grid: { color: GRID } },
-          y: { stacked: true, ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } }
+          x: { stacked: true, ticks: { color: TICK, font: { size: 10 } }, grid: { color: GRID } },
+          y: { stacked: true, beginAtZero: true, ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } }
         }
       }
     });
@@ -347,17 +359,29 @@
             label: proj,
             data: l30dates.map(function(d) { return hrs(((data.last30stacked[proj] || {})[d]) || 0); }),
             backgroundColor: STACK[i % STACK.length],
-            borderRadius: 0,
-            barPercentage: 0.92,
-            categoryPercentage: 0.98
+            borderRadius: 2,
+            borderSkipped: false,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
           };
         })
       },
       options: {
         responsive: true,
-        aspectRatio: 4,
         plugins: {
-          legend: { labels: { color: TICK, boxWidth: 12, font: { size: 11 } } },
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              color: TICK,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              boxWidth: 6,
+              boxHeight: 6,
+              padding: 10,
+              font: { size: 10 }
+            }
+          },
           tooltip: {
             callbacks: {
               title: function(ctx) { return l30dates[ctx[0].dataIndex]; },
@@ -376,14 +400,16 @@
             ticks: {
               color: TICK,
               maxRotation: 0,
-              maxTicksLimit: 8,
-              autoSkip: true
+              maxTicksLimit: 10,
+              autoSkip: true,
+              font: { size: 10 }
             },
             grid: { display: false },
             border: { display: false }
           },
           y: {
             stacked: true,
+            beginAtZero: true,
             ticks: { color: TICK, callback: function(v) { return v + 'h'; } },
             grid: { color: GRID, drawTicks: false },
             border: { display: false, dash: [4, 4] }

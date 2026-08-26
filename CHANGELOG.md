@@ -4,6 +4,15 @@ All notable changes to **Dev Timekeeper** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.36] - 2026-08-26
+
+### Changed
+- **Polished Stacked Bar Charts**: Redesigned dashboard stacked bar charts (weekly activity and 30-day trends) with rounded corners (`borderRadius: 2`), customized point style circles for legend items, and optimized spacing (`barPercentage`/`categoryPercentage`).
+- **Adaptive Chart Scaling**: Removed hardcoded aspect ratio constraint on the 30-day trend chart for adaptive scaling across editor heights.
+- **Axis Layout Improvements**: Enforced `beginAtZero: true` on chart y-axes to ensure proper zero baseline starting point, and scaled down font sizes for a cleaner look.
+
+---
+
 ## [1.0.35] - 2026-07-28
 
 ### Changed

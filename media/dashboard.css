@@ -239,10 +239,6 @@ canvas {
   width: 100% !important;
 }
 
-#heatmapChart {
-  max-height: none;
-}
-
 .treemap-box {
   height: 500px;
   position: relative;
