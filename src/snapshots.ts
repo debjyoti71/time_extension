@@ -25,16 +25,26 @@ function buildAllCardData() {
   }
   const l30set = new Set(l30dates);
 
-  const projects: Record<string, { dates: Record<string, number>, hours: Record<string, number> }> = {};
+  const projects: Record<string, { dates: Record<string, number>, hours: Record<string, number>, languages: Record<string, number> }> = {};
 
   for (const [filePath, rec] of Object.entries(data.files)) {
     const project = getProjectFolder(filePath);
     if (isJunk(project, filePath)) { continue; }
     
     if (!projects[project]) {
-      projects[project] = { dates: {}, hours: {} };
+      projects[project] = { dates: {}, hours: {}, languages: {} };
     }
     const p = projects[project];
+
+    // Languages (accumulate lifetime seconds per language)
+    if (filePath.indexOf('__workspace__') === -1) {
+      const ext = filePath.split('.').pop()?.toLowerCase() || 'other';
+      const lang = ({'ts':'TypeScript','tsx':'TypeScript','js':'JavaScript','jsx':'JavaScript',
+        'py':'Python','html':'HTML','css':'CSS','scss':'CSS','json':'JSON',
+        'md':'Markdown','java':'Java','cpp':'C++','c':'C','cs':'C#','go':'Go',
+        'rs':'Rust','rb':'Ruby','php':'PHP','sh':'Shell','sql':'SQL'})[ext] || ext.toUpperCase();
+      p.languages[lang] = (p.languages[lang] || 0) + rec.total;
+    }
 
     // Dates
     for (const [d, s] of Object.entries(rec.dailyTotal)) {

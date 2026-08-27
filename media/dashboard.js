@@ -2,6 +2,19 @@
   const vscode = acquireVsCodeApi();
   let data = __data || {};
 
+  const feedbackBtn = document.getElementById('feedbackBtn');
+  const feedbackBadge = document.getElementById('feedbackBadge');
+
+  function updateFeedbackBadge() {
+    if (feedbackBadge) {
+      if (data.showFeedbackBadge) {
+        feedbackBadge.classList.remove('hidden');
+      } else {
+        feedbackBadge.classList.add('hidden');
+      }
+    }
+  }
+
   const GRID = '#1e1e22';
   const TICK = '#888888';
   const C = ['#61afef','#98c379','#e5c07b','#e06c75','#c678dd','#56b6c2','#d19a66','#abb2bf'];
@@ -583,6 +596,7 @@
     data = e.data.data || {};
     updateCards();
     renderTable();
+    updateFeedbackBadge();
     // update chart data in-place without full redraw (no animation)
     if (charts['barChart'] && data.folderRows) {
       var top10 = [...data.folderRows].slice(0,10);
@@ -628,6 +642,7 @@
     });
   }
   applySections();
+  updateFeedbackBadge();
 
   const menuBtn = document.getElementById('menuBtn');
   const menuDropdown = document.getElementById('menuDropdown');
@@ -665,6 +680,15 @@
   if (shareCardBtn) {
     shareCardBtn.addEventListener('click', function() {
       vscode.postMessage({ command: 'shareCard' });
+    });
+  }
+
+  if (feedbackBtn) {
+    feedbackBtn.addEventListener('click', function() {
+      if (feedbackBadge) {
+        feedbackBadge.classList.add('hidden');
+      }
+      vscode.postMessage({ command: 'openFeedback' });
     });
   }
 

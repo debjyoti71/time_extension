@@ -724,3 +724,20 @@ td.lifetime {
   }
 }
 
+/* Feedback button notification badge */
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-cyan);
+  border-radius: 50%;
+  border: 1.5px solid #1e1e22;
+  box-shadow: 0 0 0 1.5px var(--color-cyan);
+}
+
+.hidden {
+  display: none !important;
+}
+

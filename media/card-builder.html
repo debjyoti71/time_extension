@@ -19,24 +19,40 @@
         <span class="controls-title">Card Builder</span>
       </div>
 
-      <!-- Layout Picker -->
+
+      <!-- Profile -->
       <div class="section">
-        <div class="section-label">LAYOUT</div>
-        <div class="layout-picker">
-          <button class="layout-btn active" data-layout="A" title="Dark Glass">
-            <div class="layout-thumb a-thumb"></div>
-            <span>Dark Glass</span>
-          </button>
-          <button class="layout-btn" data-layout="B" title="Minimal Light">
-            <div class="layout-thumb b-thumb"></div>
-            <span>Light</span>
-          </button>
-          <button class="layout-btn" data-layout="C" title="Vibrant Gradient">
-            <div class="layout-thumb c-thumb"></div>
-            <span>Gradient</span>
-          </button>
+        <div class="section-label">PROFILE</div>
+        <div style="display: flex; gap: 8px; flex-direction: column;">
+          <input type="text" id="usernameInput" class="project-search-input" placeholder="Username (e.g. @debjyoti)" style="font-size: 12px; padding: 8px 10px;">
+          <select id="avatarSelect" class="select">
+            <option value="💻">💻 Developer</option>
+            <option value="🚀">🚀 Rocket</option>
+            <option value="👾">👾 Alien</option>
+            <option value="🦊">🦊 Fox</option>
+            <option value="🐼">🐼 Panda</option>
+            <option value="⚡">⚡ Lightning</option>
+            <option value="☕">☕ Coffee</option>
+            <option value="🌟">🌟 Star</option>
+            <option value="none">No Avatar</option>
+          </select>
         </div>
       </div>
+
+      <!-- Color Presets -->
+      <div class="section">
+        <div class="section-label">THEME ACCENT COLOR</div>
+        <select id="colorPresetSelect" class="select">
+          <option value="default">Layout Default</option>
+          <option value="purple">Electric Purple</option>
+          <option value="cyan">Cyberpunk Cyan</option>
+          <option value="orange">Sunset Orange</option>
+          <option value="green">Emerald Green</option>
+          <option value="blue">Steel Blue</option>
+          <option value="rose">Rose Gold</option>
+        </select>
+      </div>
+
 
       <!-- Time Range -->
       <div class="section">
@@ -58,6 +74,20 @@
             <input type="radio" name="range" value="month">
             <span>This Month</span>
           </label>
+          <label class="radio-item">
+            <input type="radio" name="range" value="custom">
+            <span>Custom Range</span>
+          </label>
+          <div id="customDateRange" class="hidden" style="display: flex; gap: 8px; margin-top: 8px;">
+            <div style="flex: 1;">
+              <div class="section-hint" style="margin-bottom: 4px;">START</div>
+              <input type="date" id="startDateInput" class="project-search-input" style="font-size: 11px; padding: 4px 6px;">
+            </div>
+            <div style="flex: 1;">
+              <div class="section-hint" style="margin-bottom: 4px;">END</div>
+              <input type="date" id="endDateInput" class="project-search-input" style="font-size: 11px; padding: 4px 6px;">
+            </div>
+          </div>
         </div>
       </div>
 
@@ -113,6 +143,7 @@
           </label>
         </div>
       </div>
+
 
       <!-- Projects Selection -->
       <div class="section">

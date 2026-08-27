@@ -330,7 +330,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: clamp(16px, 3vw, 40px);
-  overflow: auto;
+  overflow: hidden;
   position: relative;
   min-width: 0;
   background-image: 
@@ -344,7 +344,7 @@ body {
 
 canvas {
   max-width: 100%;
-  height: auto !important;
+  max-height: 100%;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
   border-radius: 16px;
   transition: opacity 0.2s ease;
@@ -435,5 +435,18 @@ canvas {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Card Builder Polish */
+#usernameInput::placeholder {
+  color: var(--fg-dim);
+  opacity: 0.6;
+}
+#avatarSelect, #colorPresetSelect {
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
 }
 

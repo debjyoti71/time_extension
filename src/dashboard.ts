@@ -4,12 +4,16 @@ import * as fs from 'fs';
 import * as storage from './storage';
 import { onTick, getCurrentProject, getCurrentFile } from './tracker';
 import { getProjectFolder, isJunk } from './projectUtils';
+import * as statusBar from './statusBar';
+
+let extensionContext: vscode.ExtensionContext | undefined;
 
 let panel: vscode.WebviewPanel | undefined;
 
 function buildDashboardData() {
   const data = storage.load();
   const now = new Date();
+  const feedbackOpened = extensionContext ? extensionContext.globalState.get<boolean>('feedbackOpened', false) : false;
   const today = now.toISOString().slice(0, 10);
   const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayKey = yesterday.toISOString().slice(0, 10);
@@ -245,11 +249,13 @@ function buildDashboardData() {
       const f = getCurrentFile() ?? vscode.window.activeTextEditor?.document.uri.fsPath;
       if (!f || f.endsWith('__workspace__')) { return null; }
       return path.basename(f);
-    })()
+    })(),
+    showFeedbackBadge: !feedbackOpened
   };
 }
 
 export function show(context: vscode.ExtensionContext): void {
+  extensionContext = context;
   if (panel) { panel.reveal(); return; }
 
   panel = vscode.window.createWebviewPanel(
@@ -269,6 +275,15 @@ export function show(context: vscode.ExtensionContext): void {
     }
     if (msg.command === 'shareCard') {
       vscode.commands.executeCommand('timetracker.shareCard');
+      return;
+    }
+    if (msg.command === 'openFeedback') {
+      vscode.env.openExternal(vscode.Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgCyUCmDnw5eu6uGiBiXaoW30mgd0kb6YDs_dcGdEvlWoPkQ/viewform?usp=dialog'));
+      if (extensionContext) {
+        extensionContext.globalState.update('feedbackOpened', true);
+      }
+      statusBar.refresh();
+      pushLiveData();
       return;
     }
   });

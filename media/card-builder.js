@@ -11,7 +11,6 @@
   }
 
   // --- UI Elements ---
-  const layoutBtns = document.querySelectorAll('.layout-btn');
   const rangeRadios = document.querySelectorAll('input[name="range"]');
   const chartRadios = document.querySelectorAll('input[name="chart"]');
   const funFactSelect = document.getElementById('funFactSelect');
@@ -25,15 +24,38 @@
   const downloadBtn = document.getElementById('downloadBtn');
   const statusText = document.getElementById('statusText');
 
+  // New UI Elements
+  const usernameInput = document.getElementById('usernameInput');
+  const avatarSelect = document.getElementById('avatarSelect');
+  const colorPresetSelect = document.getElementById('colorPresetSelect');
+  const startDateInput = document.getElementById('startDateInput');
+  const endDateInput = document.getElementById('endDateInput');
+  const customDateRange = document.getElementById('customDateRange');
+
+  // Get all active dates from database
+  const allActiveDates = new Set();
+  Object.values(D.projects || {}).forEach(proj => {
+    Object.keys(proj.dates || {}).forEach(d => allActiveDates.add(d));
+  });
+  const sortedAllDates = Array.from(allActiveDates).sort();
+  const todayStr = new Date(D.generatedAt || Date.now()).toISOString().slice(0, 10);
+  const minDateStr = sortedAllDates[0] || todayStr;
+  const maxDateStr = sortedAllDates[sortedAllDates.length - 1] || todayStr;
+
   // --- State ---
   let state = {
     layout: 'A',
-    range: 'lifetime', // 'lifetime', 'l30', 'l7', 'month'
+    range: 'lifetime', // 'lifetime', 'l30', 'l7', 'month', 'custom'
     chart: 'bar',
     bottom: 'projects',
     funFact: 'coffee',
     slots: ['totalTime', 'dailyAvg', 'streak', 'peakHours'],
-    selectedProjects: Object.keys(D.projects || {}) // All by default
+    selectedProjects: Object.keys(D.projects || {}), // All by default
+    username: '',
+    avatar: '💻',
+    colorScheme: 'default',
+    startDate: minDateStr,
+    endDate: maxDateStr
   };
 
   let computed = null; // Will hold the aggregated data
@@ -69,6 +91,10 @@
     const topL30 = {};
     const topL7 = {};
     const topMonth = {};
+    const topCustom = {};
+
+    let customTotalSecs = 0;
+    const customDays = {};
 
     state.selectedProjects.forEach(proj => {
       const p = (D.projects || {})[proj];
@@ -78,6 +104,7 @@
       topL30[proj] = 0;
       topL7[proj] = 0;
       topMonth[proj] = 0;
+      topCustom[proj] = 0;
 
       // Dates
       for (const [dateStr, secs] of Object.entries(p.dates || {})) {
@@ -102,6 +129,12 @@
           monthTotalSecs += secs;
           topMonth[proj] += secs;
         }
+
+        if (dateStr >= state.startDate && dateStr <= state.endDate) {
+          customDays[dateStr] = (customDays[dateStr] || 0) + secs;
+          customTotalSecs += secs;
+          topCustom[proj] += secs;
+        }
       }
 
       // Peak Hours
@@ -118,11 +151,21 @@
     const l30ActiveCount = Object.values(l30Days).filter(v => v > 0).length;
     const l7ActiveCount = Object.values(l7Days).filter(v => v > 0).length;
     const monthActiveCount = Object.values(monthDays).filter(v => v > 0).length;
+    const customActiveCount = Object.values(customDays).filter(v => v > 0).length;
 
     // Daily Values Array for charts
     const l30DailyValues = allL30.map(d => l30Days[d] || 0);
     const l7DailyValues = l7dates.map(d => l7Days[d] || 0);
     const monthDailyValues = monthDates.map(d => monthDays[d] || 0);
+
+    const customDatesList = [];
+    let curDate = new Date(state.startDate);
+    const endDateObj = new Date(state.endDate);
+    while (curDate <= endDateObj) {
+      customDatesList.push(curDate.toISOString().slice(0, 10));
+      curDate.setDate(curDate.getDate() + 1);
+    }
+    const customDailyValues = customDatesList.map(d => customDays[d] || 0);
 
     // Peak Hour
     const peakHour = hourTotals.indexOf(Math.max(...hourTotals, 0));
@@ -158,6 +201,15 @@
     }
 
     const totalHours = Math.floor(lifeTotalSecs / 3600);
+
+    let clubMilestone = 0;
+    if (totalHours >= 100) {
+      clubMilestone = Math.floor(totalHours / 100) * 100;
+    } else if (totalHours >= 50) {
+      clubMilestone = 50;
+    } else if (totalHours >= 10) {
+      clubMilestone = 10;
+    }
 
     computed = {
       lifetime: {
@@ -196,10 +248,19 @@
         dailyValues: monthDailyValues,
         dates: monthDates
       },
+      custom: {
+        totalSecs: customTotalSecs,
+        totalFmt: fmt(customTotalSecs),
+        activeDays: customActiveCount,
+        avgPerDayFmt: fmt(customActiveCount > 0 ? Math.round(customTotalSecs / customActiveCount) : 0),
+        topProjects: getTop(topCustom, customTotalSecs),
+        dailyValues: customDailyValues,
+        dates: customDatesList
+      },
       streak,
       peakLabel,
       totalProjects: state.selectedProjects.length,
-      milestoneLabel: totalHours > 0 ? `${totalHours}h Club` : null
+      milestoneLabel: clubMilestone > 0 ? `${clubMilestone}h Club` : null
     };
   }
 
@@ -312,16 +373,36 @@
     });
   }
 
-  layoutBtns.forEach(btn => btn.addEventListener('click', () => {
-    layoutBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.layout = btn.dataset.layout;
-    render();
+  rangeRadios.forEach(r => r.addEventListener('change', (e) => {
+    if (e.target.checked) { 
+      state.range = e.target.value;
+      if (state.range === 'custom') {
+        customDateRange.classList.remove('hidden');
+      } else {
+        customDateRange.classList.add('hidden');
+      }
+      computeData();
+      render();
+    }
   }));
 
-  rangeRadios.forEach(r => r.addEventListener('change', (e) => {
-    if (e.target.checked) { state.range = e.target.value; render(); }
-  }));
+  if (startDateInput) {
+    startDateInput.value = state.startDate;
+    startDateInput.addEventListener('change', (e) => {
+      state.startDate = e.target.value;
+      computeData();
+      render();
+    });
+  }
+
+  if (endDateInput) {
+    endDateInput.value = state.endDate;
+    endDateInput.addEventListener('change', (e) => {
+      state.endDate = e.target.value;
+      computeData();
+      render();
+    });
+  }
 
   chartRadios.forEach(r => r.addEventListener('change', (e) => {
     if (e.target.checked) { state.chart = e.target.value; render(); }
@@ -338,6 +419,29 @@
       render();
     });
   }
+
+  if (usernameInput) {
+    usernameInput.addEventListener('input', (e) => {
+      state.username = e.target.value.trim();
+      render();
+    });
+  }
+
+  if (avatarSelect) {
+    avatarSelect.addEventListener('change', (e) => {
+      state.avatar = e.target.value;
+      render();
+    });
+  }
+
+  if (colorPresetSelect) {
+    colorPresetSelect.addEventListener('change', (e) => {
+      state.colorScheme = e.target.value;
+      render();
+    });
+  }
+
+
 
   if (downloadBtn) {
     downloadBtn.addEventListener('click', () => {
@@ -370,6 +474,36 @@
     ctx.moveTo(x+size/2,y+size/2); ctx.lineTo(x+size/2+4,y+size/2+3);
     ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
   }
+
+  const THEME_ACCENTS = {
+    default: null,
+    purple: { primary: '#a855f7', secondary: 'rgba(168,85,247,0.15)', text: '#e9d5ff' },
+    cyan: { primary: '#06b6d4', secondary: 'rgba(6,182,212,0.15)', text: '#cffafe' },
+    orange: { primary: '#f97316', secondary: 'rgba(249,115,22,0.15)', text: '#ffedd5' },
+    green: { primary: '#10b981', secondary: 'rgba(16,185,129,0.15)', text: '#d1fae5' },
+    blue: { primary: '#3b82f6', secondary: 'rgba(59,130,246,0.15)', text: '#dbeafe' },
+    rose: { primary: '#f43f5e', secondary: 'rgba(244,63,94,0.15)', text: '#ffe4e6' }
+  };
+
+  function getAccent(layoutDefault) {
+    if (state.colorScheme === 'default' || !THEME_ACCENTS[state.colorScheme]) {
+      return layoutDefault;
+    }
+    return THEME_ACCENTS[state.colorScheme].primary;
+  }
+
+  function drawProfile(ctx, W, PAD, y, defaultAccent, textColor) {
+    if (!state.username && (state.avatar === 'none' || !state.avatar)) {
+      return y;
+    }
+    const profileText = (state.avatar !== 'none' ? state.avatar + ' ' : '') + (state.username || 'Developer');
+    ctx.font = '600 11px "Segoe UI"';
+    ctx.fillStyle = textColor;
+    ctx.fillText(profileText, PAD + 34, y + 27);
+    return y + 14;
+  }
+
+
 
   function drawChartHelper(ctx, data, W, PAD, y, c1, c2, textColor) {
     if(state.chart === 'none' || !data.dailyValues || !data.dailyValues.length) return y;
@@ -483,12 +617,13 @@
     gl.addColorStop(0,'rgba(198,120,221,0.07)'); gl.addColorStop(1,'transparent');
     ctx.fillStyle=gl; ctx.fillRect(0,0,W,H);
     const bar=ctx.createLinearGradient(0,0,W,0);
-    bar.addColorStop(0,'#c678dd'); bar.addColorStop(1,'#61afef');
+    const accentColor = getAccent('#c678dd');
+    bar.addColorStop(0,accentColor); bar.addColorStop(1,getAccent('#61afef'));
     rr(0,0,W,4,0); ctx.fillStyle=bar; ctx.fill();
 
     const PAD=36; let y=PAD;
 
-    drawLogo(logoImg, PAD, y-2, 26, '#c678dd');
+    drawLogo(logoImg, PAD, y-2, 26, accentColor);
     ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#fff'; ctx.letterSpacing='1.5px';
     ctx.fillText('DEV TIMEKEEPER', PAD+34, y+15); ctx.letterSpacing='0px';
 
@@ -500,10 +635,11 @@
       rr(W-PAD-bw,y,bw,22,11); ctx.fillStyle=grd; ctx.fill();
       rr(W-PAD-bw,y,bw,22,11);
       const sg=ctx.createLinearGradient(W-PAD-bw,0,W-PAD,0);
-      sg.addColorStop(0,'rgba(198,120,221,0.6)'); sg.addColorStop(1,'rgba(97,175,239,0.6)');
+      sg.addColorStop(0,accentColor + '99'); sg.addColorStop(1,'rgba(97,175,239,0.6)');
       ctx.strokeStyle=sg; ctx.lineWidth=1; ctx.stroke();
       ctx.fillStyle='#fff'; ctx.fillText('🏆 '+computed.milestoneLabel,W-PAD-bw+10,y+15);
     }
+    y = drawProfile(ctx, W, PAD, y, accentColor, 'rgba(255,255,255,0.6)');
     y+=50;
 
     ctx.font='800 58px "Segoe UI"'; ctx.fillStyle='#ffffff';
@@ -524,7 +660,7 @@
       const opt = STAT_OPTIONS[key];
       const val = opt ? opt.get(data) : '--';
       const sx=PAD+i*(sw+10);
-      const c = COLORS[i%COLORS.length];
+      const c = getAccent(COLORS[i%COLORS.length]);
       
       rr(sx,y,sw,78,12); ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fill();
       rr(sx,y,sw,78,12);
@@ -540,13 +676,13 @@
     });
     y+=94;
 
-    y = drawChartHelper(ctx, data, W, PAD, y, '#c678dd', 'rgba(198,120,221,0.1)', 'rgba(255,255,255,0.2)');
+    y = drawChartHelper(ctx, data, W, PAD, y, accentColor, accentColor + '1a', 'rgba(255,255,255,0.2)');
 
     if (state.bottom === 'projects') {
       ctx.font='500 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.2)';
       ctx.fillText('TOP PROJECTS',PAD,y+10); y+=22;
       data.topProjects.slice(0,4).forEach((entry,i) => {
-        const color=COLORS[i%COLORS.length]; const rx=y+i*38;
+        const color=getAccent(COLORS[i%COLORS.length]); const rx=y+i*38;
         ctx.beginPath(); ctx.arc(PAD+6,rx+10,5,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
         ctx.font='500 12px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.75)';
         let nm=entry.name; while(ctx.measureText(nm).width>W-PAD*2-80&&nm.length>4)nm=nm.slice(0,-1);
@@ -578,7 +714,8 @@
     
     const PAD=36; let y=PAD;
 
-    drawLogo(logoImg, PAD, y-2, 26, '#3b82f6');
+    const accentColor = getAccent('#3b82f6');
+    drawLogo(logoImg, PAD, y-2, 26, accentColor);
     ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#0f172a'; ctx.letterSpacing='1.5px';
     ctx.fillText('DEV TIMEKEEPER', PAD+34, y+15); ctx.letterSpacing='0px';
 
@@ -589,6 +726,7 @@
       rr(W-PAD-bw,y,bw,22,11); ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1; ctx.stroke();
       ctx.fillStyle='#334155'; ctx.fillText('🏆 '+computed.milestoneLabel,W-PAD-bw+10,y+15);
     }
+    y = drawProfile(ctx, W, PAD, y, accentColor, '#64748b');
     y+=50;
 
     ctx.font='800 58px "Segoe UI"'; ctx.fillStyle='#0f172a';
@@ -620,7 +758,7 @@
     });
     y+=94;
 
-    y = drawChartHelper(ctx, data, W, PAD, y, '#3b82f6', null, '#64748b');
+    y = drawChartHelper(ctx, data, W, PAD, y, accentColor, null, '#64748b');
 
     if (state.bottom === 'projects') {
       ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='#64748b';
@@ -630,12 +768,12 @@
         ctx.font='600 12px "Segoe UI"'; ctx.fillStyle='#0f172a';
         let nm=entry.name; while(ctx.measureText(nm).width>W-PAD*2-80&&nm.length>4)nm=nm.slice(0,-1);
         if(nm!==entry.name)nm+='…'; ctx.fillText(nm,PAD,rx+14);
-        ctx.font='700 12px "Segoe UI"'; ctx.fillStyle='#3b82f6'; ctx.textAlign='right';
+        ctx.font='700 12px "Segoe UI"'; ctx.fillStyle=accentColor; ctx.textAlign='right';
         ctx.fillText(entry.fmt,W-PAD,rx+14); ctx.textAlign='left';
         rr(PAD,rx+22,W-PAD*2,4,2); ctx.fillStyle='#f1f5f9'; ctx.fill();
         if(entry.pct>0){
           const fw=Math.max(4,Math.round((entry.pct/100)*(W-PAD*2)));
-          rr(PAD,rx+22,fw,4,2); ctx.fillStyle='#3b82f6'; ctx.fill();
+          rr(PAD,rx+22,fw,4,2); ctx.fillStyle=accentColor; ctx.fill();
         }
       });
       y+=data.topProjects.slice(0,4).length*38+12;
@@ -674,12 +812,13 @@
 
     // Multi-color vibrant top accent bar
     const bar=ctx.createLinearGradient(0,0,W,0);
-    bar.addColorStop(0,'#a855f7'); bar.addColorStop(0.5,'#38bdf8'); bar.addColorStop(1,'#34d399');
+    const accentColor = getAccent('#38bdf8');
+    bar.addColorStop(0,getAccent('#a855f7')); bar.addColorStop(0.5,accentColor); bar.addColorStop(1,getAccent('#34d399'));
     rr(0,0,W,5,0); ctx.fillStyle=bar; ctx.fill();
 
     const PAD=40; let y=PAD;
 
-    drawLogo(logoImg, PAD, y-2, 26, '#38bdf8');
+    drawLogo(logoImg, PAD, y-2, 26, accentColor);
     ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#ffffff'; ctx.letterSpacing='1.5px';
     ctx.fillText('DEV TIMEKEEPER', PAD+34, y+15); ctx.letterSpacing='0px';
 
@@ -690,6 +829,7 @@
       rr(W-PAD-bw,y,bw,24,12); ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1; ctx.stroke();
       ctx.fillStyle='#ffffff'; ctx.fillText('🏆 '+computed.milestoneLabel,W-PAD-bw+12,y+16);
     }
+    y = drawProfile(ctx, W, PAD, y, accentColor, 'rgba(255,255,255,0.7)');
     y+=60;
 
     ctx.font='800 64px "Segoe UI"'; ctx.fillStyle='#ffffff';
@@ -723,7 +863,7 @@
     });
     y+=104;
 
-    y = drawChartHelper(ctx, data, W, PAD, y, '#38bdf8', 'rgba(56,189,248,0.15)', 'rgba(255,255,255,0.7)');
+    y = drawChartHelper(ctx, data, W, PAD, y, accentColor, 'rgba(56,189,248,0.15)', 'rgba(255,255,255,0.7)');
 
     if (state.bottom === 'projects') {
       ctx.font='600 9px "Segoe UI"'; ctx.fillStyle='rgba(255,255,255,0.65)';
@@ -733,13 +873,13 @@
         ctx.font='600 13px "Segoe UI"'; ctx.fillStyle='#ffffff';
         let nm=entry.name; while(ctx.measureText(nm).width>W-PAD*2-80&&nm.length>4)nm=nm.slice(0,-1);
         if(nm!==entry.name)nm+='…'; ctx.fillText(nm,PAD,rx+14);
-        ctx.font='700 13px "Segoe UI"'; ctx.fillStyle='#38bdf8'; ctx.textAlign='right';
+        ctx.font='700 13px "Segoe UI"'; ctx.fillStyle=accentColor; ctx.textAlign='right';
         ctx.fillText(entry.fmt,W-PAD,rx+14); ctx.textAlign='left';
         rr(PAD,rx+22,W-PAD*2,4,2); ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fill();
         if(entry.pct>0){
           const fw=Math.max(4,Math.round((entry.pct/100)*(W-PAD*2)));
           const fg=ctx.createLinearGradient(PAD,0,PAD+fw,0);
-          fg.addColorStop(0,'#a855f7'); fg.addColorStop(1,'#38bdf8');
+          fg.addColorStop(0,getAccent('#a855f7')); fg.addColorStop(1,accentColor);
           rr(PAD,rx+22,fw,4,2); ctx.fillStyle=fg; ctx.fill();
         }
       });
@@ -757,14 +897,18 @@
     if (!computed) computeData();
     const data = computed[state.range] || computed.lifetime;
     
-    // Calculate dynamic height based on options
-    let H = 340; // Base height (header + total + footer)
-    if (state.funFact !== 'none') H += (state.layout==='C'?56:16);
-    H += 94; // Slots
-    if (state.chart !== 'none') H += 128; // Chart
-    if (state.bottom === 'projects') H += Math.max(1, Math.min(4, (data.topProjects || []).length)) * 38 + 34; // Projects
+    // Calculate dynamic natural height based on visible elements on a virtual 680-wide canvas
+    let naturalH = 340; // Base height (header + total + footer)
+    if (state.username || (state.avatar !== 'none' && state.avatar)) naturalH += 14;
+    if (state.funFact !== 'none') naturalH += (state.layout==='C'?56:16);
+    naturalH += 94; // Slots
+    if (state.chart !== 'none') naturalH += 128; // Chart
+    if (state.bottom === 'projects') {
+      naturalH += Math.max(1, Math.min(4, (data.topProjects || []).length)) * 38 + 34; // Projects
+    }
 
     const W = 680;
+    const H = naturalH;
     const SC = 2; // Retina scale
     
     canvas.width = W * SC;
@@ -772,13 +916,17 @@
     canvas.style.width = W + 'px';
     canvas.style.maxWidth = '100%';
     canvas.style.height = 'auto';
+    
+    ctx.clearRect(0, 0, W * SC, H * SC);
+    
+    ctx.save();
     ctx.scale(SC, SC);
-
-    ctx.clearRect(0,0,W,H);
     
     if (state.layout === 'A') renderLayoutA(data, W, H, SC);
     else if (state.layout === 'B') renderLayoutB(data, W, H, SC);
     else if (state.layout === 'C') renderLayoutC(data, W, H, SC);
+    
+    ctx.restore();
   }
 
   // --- Init ---

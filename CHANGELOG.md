@@ -4,6 +4,20 @@ All notable changes to **Dev Timekeeper** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.37] - 2026-08-28
+
+### Added
+- **Share Card Customizations**: Added support for custom username handles and developer avatar selections directly from the sidebar.
+- **Custom Time Ranges**: Added a "Custom Range" picker under the Time Range selector to define flexible Start and End dates for share card aggregation.
+- **Preset Color Accents**: Added preset theme colors (Purple, Cyan, Orange, Green, Blue, Rose) to colorize the card builder layout elements dynamically.
+
+### Changed
+- **Rounded Milestone Clubs**: Milestone labels are now rounded down to clean round intervals (100h, 50h, 10h clubs) instead of exact raw hour values.
+- **Simplified Card Builder Layout**: Streamlined the layout builder, consolidated the default dark glass design, and removed aspect ratio constraints.
+- **Overflow containment**: Disabled canvas scrolling inside the preview pane, ensuring cards fit on one screen page without scrollbars.
+
+---
+
 ## [1.0.36] - 2026-08-26
 
 ### Changed
