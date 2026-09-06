@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as storage from './storage';
 import { getProjectFolder, isJunk } from './projectUtils';
+import { loadGroups } from './groups';
 
 function isoDay(d: Date): string { return d.toISOString().slice(0, 10); }
 
@@ -80,6 +81,7 @@ function buildAllCardData() {
     generatedAt: now.toISOString(),
     l30dates,
     projects,
+    groupsData: loadGroups(),
     iconDataUrl
   };
 }

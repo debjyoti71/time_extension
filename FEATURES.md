@@ -22,6 +22,18 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 ---
 
+## 🗂️ Project Groups & Multi-Repo Aggregation
+
+Many real-world projects span multiple repositories, microservices, or versioned directories (e.g. `frontend`, `backend`, `v2`, `v3`). Rather than splitting your metrics into fragmented rows, **Dev Timekeeper** provides native project grouping:
+
+- **Aggregated Analytics**: Dashboard charts (lifetime distribution, 7-day stacked activity, 30-day trends, and weekly top 5) aggregate grouped projects automatically.
+- **Accordion Project Details Table**: Toggle between **Grouped** and **Individual** views. Group rows expand to reveal each sub-repo with its percentage share of total group time.
+- **Smart Detection**: Heuristic stem analysis detects related project folders (e.g., `elina_legal_ai_v2` and `v3`) and suggests grouping with one click.
+- **Safe & Non-Destructive**: Groups are stored in `~/.vscode-time-tracker/groups.json`. Raw tracking records in `data.json` are never modified or merged, ensuring zero data loss upon editing or deleting groups.
+- **Interactive Management Modal**: Segmented tabbed interface (`Active Groups` and `Create Group`), curated glowing color themes, card-based folder selector, and delete confirmation safeguards.
+
+---
+
 ## 📊 8-Section Live Webview Dashboard
 
 Access the real-time analytics dashboard anytime by clicking the status bar item or executing `Time Tracker: Show Dashboard`. Powered by CSS Container Queries, the dashboard fluidly reflows multi-column stat cards, dual-chart rows, pie chart legends, and file tables across narrow sidebars, split editor panes, and full-screen webview tabs.

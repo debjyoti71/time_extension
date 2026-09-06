@@ -19,11 +19,15 @@ time-tracker/
 │   ├── tracker.ts         # Core tracking logic + heartbeat process
 │   ├── storage.ts         # Read/write ~/.vscode-time-tracker/data.json
 │   ├── statusBar.ts       # Status bar item (bottom-right)
-│   └── dashboard.ts       # Data aggregation + webview panel
+│   ├── dashboard.ts       # Data aggregation + webview panel
+│   ├── groups.ts          # Project grouping logic & ~/.vscode-time-tracker/groups.json
+│   └── snapshots.ts       # Multi-repo summary & share card metrics
 ├── media/
 │   ├── dashboard.html     # Webview HTML template
 │   ├── dashboard.css      # Dark theme styles
 │   ├── dashboard.js       # Chart.js rendering + UI logic
+│   ├── card-builder.html  # Share Card builder HTML template
+│   ├── card-builder.js    # Share Card canvas rendering & export
 │   ├── chart.min.js       # Chart.js 4.4.0 (bundled locally)
 │   └── treemap.min.js     # chartjs-chart-treemap 3.1.0 (bundled locally)
 ├── heartbeat.ps1          # PowerShell system idle monitor (Windows)
@@ -49,6 +53,10 @@ time-tracker/
 │       │       └── storage.ts ── data.json            │
 │       │                                              │
 │       ├── statusBar.ts                               │
+│       │                                              │
+│       ├── groups.ts ───── groups.json                │
+│       │                                              │
+│       ├── snapshots.ts ── share card data            │
 │       │                                              │
 │       └── dashboard.ts ── settings.json              │
 │               │                                      │

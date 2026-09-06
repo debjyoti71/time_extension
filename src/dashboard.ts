@@ -5,6 +5,7 @@ import * as storage from './storage';
 import { onTick, getCurrentProject, getCurrentFile } from './tracker';
 import { getProjectFolder, isJunk } from './projectUtils';
 import * as statusBar from './statusBar';
+import { loadGroups, saveGroups as persistGroups, getFolderToGroupMap, suggestGroups, ProjectGroup, GroupsData } from './groups';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -236,8 +237,129 @@ function buildDashboardData() {
   const avgPerDay     = activeDays > 0 ? Math.round(lifetimeSecs / activeDays) : 0;
   const totalProjects = folderRows.length;
 
+  // --- Project Groups Integration ---
+  const groupsData = loadGroups();
+  const folderToGroup = getFolderToGroupMap(groupsData.groups);
+
+  const groupRowMap = new Map<string, any>();
+  for (const g of groupsData.groups) {
+    groupRowMap.set(g.id, {
+      isGroup: true,
+      id: g.id,
+      name: g.name,
+      color: g.color || '#6366f1',
+      totalSecs: 0,
+      todaySecs: 0,
+      weekSecs: 0,
+      monthSecs: 0,
+      rolling30Secs: 0,
+      last7Secs: 0,
+      lastActive: 0,
+      subProjects: [] as any[]
+    });
+  }
+
+  const groupedFolderRows: any[] = [];
+  for (const r of folderRows) {
+    const grp = folderToGroup.get(r.name.toLowerCase());
+    if (grp && groupRowMap.has(grp.id)) {
+      const gRow = groupRowMap.get(grp.id);
+      gRow.totalSecs += r.totalSecs;
+      gRow.todaySecs += r.todaySecs;
+      gRow.weekSecs += r.weekSecs;
+      gRow.monthSecs += r.monthSecs;
+      gRow.rolling30Secs += r.rolling30Secs;
+      gRow.last7Secs += r.last7Secs;
+      gRow.lastActive = Math.max(gRow.lastActive, r.lastActive);
+      gRow.subProjects.push(r);
+    } else {
+      groupedFolderRows.push({
+        isGroup: false,
+        name: r.name,
+        totalSecs: r.totalSecs,
+        todaySecs: r.todaySecs,
+        weekSecs: r.weekSecs,
+        monthSecs: r.monthSecs,
+        rolling30Secs: r.rolling30Secs,
+        last7Secs: r.last7Secs,
+        lastActive: r.lastActive,
+        subProjects: []
+      });
+    }
+  }
+
+  for (const gRow of groupRowMap.values()) {
+    if (gRow.totalSecs > 0 || gRow.subProjects.length > 0) {
+      gRow.subProjects.sort((a: any, b: any) => b.totalSecs - a.totalSecs);
+      groupedFolderRows.push(gRow);
+    }
+  }
+  groupedFolderRows.sort((a, b) => b.totalSecs - a.totalSecs);
+
+  // Grouped dirTotals
+  const groupedDirTotals: { [k: string]: number } = {};
+  for (const r of groupedFolderRows) {
+    groupedDirTotals[r.name] = r.totalSecs;
+  }
+
+  // Grouped last 7 stacked
+  const groupedLast7projects = groupedFolderRows
+    .filter(r => (r.last7Secs || 0) > 0)
+    .map(r => r.name);
+  const groupedLast7stacked: { [proj: string]: { [date: string]: number } } = {};
+  for (const proj of groupedLast7projects) { groupedLast7stacked[proj] = {}; }
+
+  for (const [filePath, rec] of Object.entries(data.files)) {
+    const rawProject = fileProjectMap.get(filePath);
+    if (!rawProject) { continue; }
+    const grp = folderToGroup.get(rawProject.toLowerCase());
+    const effectiveProject = grp ? grp.name : rawProject;
+    if (!groupedLast7stacked[effectiveProject]) { continue; }
+    for (const date of last7dates) {
+      const s = rec.dailyTotal[date] || 0;
+      if (s) {
+        groupedLast7stacked[effectiveProject][date] = (groupedLast7stacked[effectiveProject][date] || 0) + s;
+      }
+    }
+  }
+
+  // Grouped last 30 stacked
+  const topGroupedByRolling30 = groupedFolderRows
+    .map(r => ({ name: r.name, rolling: r.rolling30Secs || 0 }))
+    .filter(r => r.rolling > 0)
+    .sort((a, b) => b.rolling - a.rolling);
+  const primaryGroupedProjects = topGroupedByRolling30.slice(0, 6).map(r => r.name);
+
+  const groupedLast30stacked: { [proj: string]: { [date: string]: number } } = {};
+  for (const proj of primaryGroupedProjects) { groupedLast30stacked[proj] = {}; }
+  groupedLast30stacked['Others'] = {};
+
+  for (const [filePath, rec] of Object.entries(data.files)) {
+    const rawProject = fileProjectMap.get(filePath);
+    if (!rawProject) { continue; }
+    const grp = folderToGroup.get(rawProject.toLowerCase());
+    const effectiveProject = grp ? grp.name : rawProject;
+    const bucket = primaryGroupedProjects.includes(effectiveProject) ? effectiveProject : 'Others';
+    for (const date of last30Keys) {
+      const s = rec.dailyTotal[date] || 0;
+      if (s) {
+        groupedLast30stacked[bucket][date] = (groupedLast30stacked[bucket][date] || 0) + s;
+      }
+    }
+  }
+  if (!Object.keys(groupedLast30stacked['Others']).length) { delete groupedLast30stacked['Others']; }
+  const groupedTop6projects = Object.keys(groupedLast30stacked);
+  const groupedWeekTop5 = [...groupedFolderRows].sort((a, b) => b.weekSecs - a.weekSecs).slice(0, 5);
+
+  const allProjectNames = folderRows.map(r => r.name);
+  const suggestedGroups = suggestGroups(allProjectNames, groupsData.groups, groupsData.dismissedSuggestions);
+
   return {
     folderRows, dirTotals, langMap,
+    groupedFolderRows, groupedDirTotals,
+    groupedLast7stacked, groupedLast7projects,
+    groupedLast30stacked, groupedTop6projects, groupedWeekTop5,
+    groupsData, suggestedGroups, allProjectNames,
     last7, last7dates, last7stacked, last7projects,
     last30, last30stacked, top6projects,
     last6months, hourBuckets, weekTop5,
@@ -266,7 +388,7 @@ export function show(context: vscode.ExtensionContext): void {
   const unsubTick = onTick(() => pushLiveData());
   panel.onDidDispose(() => { unsubTick(); panel = undefined; });
 
-  // listen for settings save from webview
+  // listen for messages from webview
   panel.webview.onDidReceiveMessage(msg => {
     if (msg.command === 'saveSettings') {
       const settingsPath = require('path').join(require('os').homedir(), '.vscode-time-tracker', 'settings.json');
@@ -283,6 +405,38 @@ export function show(context: vscode.ExtensionContext): void {
         extensionContext.globalState.update('feedbackOpened', true);
       }
       statusBar.refresh();
+      pushLiveData();
+      return;
+    }
+    if (msg.command === 'saveGroups') {
+      persistGroups(msg.groupsData);
+      pushLiveData();
+      return;
+    }
+    if (msg.command === 'dismissSuggestion') {
+      const gd = loadGroups();
+      if (!gd.dismissedSuggestions) { gd.dismissedSuggestions = []; }
+      if (!gd.dismissedSuggestions.includes(msg.suggestionId)) {
+        gd.dismissedSuggestions.push(msg.suggestionId);
+        persistGroups(gd);
+        pushLiveData();
+      }
+      return;
+    }
+    if (msg.command === 'applySuggestion') {
+      const gd = loadGroups();
+      const newGroup: ProjectGroup = {
+        id: 'grp_' + Date.now(),
+        name: msg.name,
+        color: msg.color || '#6366f1',
+        projects: msg.projects
+      };
+      gd.groups.push(newGroup);
+      if (!gd.dismissedSuggestions) { gd.dismissedSuggestions = []; }
+      if (msg.suggestionId && !gd.dismissedSuggestions.includes(msg.suggestionId)) {
+        gd.dismissedSuggestions.push(msg.suggestionId);
+      }
+      persistGroups(gd);
       pushLiveData();
       return;
     }

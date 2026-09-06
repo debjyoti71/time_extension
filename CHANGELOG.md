@@ -4,6 +4,20 @@ All notable changes to **Dev Timekeeper** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.38] - 2026-09-06
+
+### Added
+- **Project Groups & Multi-Repo Unification**: Group multi-repo codebases, microservices, and versioned iterations (e.g., `frontend`, `backend`, `v2`, `v3`) into single tracked projects.
+- **Grouped Dashboard Charts**: Lifetime bar charts, share pie distributions, 7-day stacked activity, 30-day trends, and weekly top 5 metrics now seamlessly aggregate grouped projects.
+- **Accordion Project Details Table**: Added a segmented view toggle (`[ Grouped ] [ Individual ]`). Group rows expand/collapse with percentage progress bars showing each sub-repo's contribution to the total group time.
+- **Smart Group Suggestions**: Automatic stem-detection heuristic scans folder names to identify related project components and presents one-click grouping suggestions.
+- **Restructured Manage Groups Modal**: Redesigned modal with Lucide vector SVG icons, segmented navigation tabs (`Active Groups` and `Create Group`), curated glowing color swatches, card-based folder selector with search, and select-all/clear quick actions.
+- **Delete Confirmation Modal**: Added safe confirmation modal preventing accidental deletions while preserving raw tracking data on individual folders.
+- **Release Announcement Banner**: Docked top announcement bar with `!` info badge, responsive spotlight scroll, and persistent glowing spotlight tour.
+- **Share Card Rollup**: Project grouping support integrated into the Share Card generator.
+
+---
+
 ## [1.0.37] - 2026-08-28
 
 ### Added

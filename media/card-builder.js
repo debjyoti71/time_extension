@@ -96,44 +96,53 @@
     let customTotalSecs = 0;
     const customDays = {};
 
+    const groups = (D.groupsData && D.groupsData.groups) || [];
+    const groupMap = {};
+    groups.forEach(g => {
+      (g.projects || []).forEach(p => { groupMap[p.toLowerCase()] = g.name; });
+    });
+
     state.selectedProjects.forEach(proj => {
       const p = (D.projects || {})[proj];
       if (!p) return;
 
-      topLife[proj] = 0;
-      topL30[proj] = 0;
-      topL7[proj] = 0;
-      topMonth[proj] = 0;
-      topCustom[proj] = 0;
+      const targetProj = groupMap[proj.toLowerCase()] || proj;
+      if (!(targetProj in topLife)) {
+        topLife[targetProj] = 0;
+        topL30[targetProj] = 0;
+        topL7[targetProj] = 0;
+        topMonth[targetProj] = 0;
+        topCustom[targetProj] = 0;
+      }
 
       // Dates
       for (const [dateStr, secs] of Object.entries(p.dates || {})) {
         lifeDays[dateStr] = (lifeDays[dateStr] || 0) + secs;
         lifeTotalSecs += secs;
-        topLife[proj] += secs;
+        topLife[targetProj] += secs;
 
         if (l30set.has(dateStr)) {
           l30Days[dateStr] = (l30Days[dateStr] || 0) + secs;
           l30TotalSecs += secs;
-          topL30[proj] += secs;
+          topL30[targetProj] += secs;
         }
 
         if (l7set.has(dateStr)) {
           l7Days[dateStr] = (l7Days[dateStr] || 0) + secs;
           l7TotalSecs += secs;
-          topL7[proj] += secs;
+          topL7[targetProj] += secs;
         }
 
         if (monthSet.has(dateStr)) {
           monthDays[dateStr] = (monthDays[dateStr] || 0) + secs;
           monthTotalSecs += secs;
-          topMonth[proj] += secs;
+          topMonth[targetProj] += secs;
         }
 
         if (dateStr >= state.startDate && dateStr <= state.endDate) {
           customDays[dateStr] = (customDays[dateStr] || 0) + secs;
           customTotalSecs += secs;
-          topCustom[proj] += secs;
+          topCustom[targetProj] += secs;
         }
       }
 
@@ -314,8 +323,16 @@
   function initProjects(filterText = '') {
     projectsListEl.innerHTML = '';
     const allProjs = Object.keys(D.projects || {}).sort();
+    const groups = (D.groupsData && D.groupsData.groups) || [];
+    const groupMap = {};
+    groups.forEach(g => {
+      (g.projects || []).forEach(p => { groupMap[p.toLowerCase()] = g.name; });
+    });
+
     allProjs.forEach(proj => {
-      if (filterText && !proj.toLowerCase().includes(filterText.toLowerCase())) return;
+      const gName = groupMap[proj.toLowerCase()];
+      const searchTarget = gName ? `${proj} ${gName}` : proj;
+      if (filterText && !searchTarget.toLowerCase().includes(filterText.toLowerCase())) return;
 
       const lbl = document.createElement('label');
       
@@ -336,6 +353,12 @@
       
       lbl.appendChild(cb);
       lbl.appendChild(document.createTextNode(proj));
+      if (gName) {
+        const tag = document.createElement('small');
+        tag.style.cssText = 'color:var(--text-muted, #888);margin-left:6px;font-size:10px;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;';
+        tag.textContent = gName;
+        lbl.appendChild(tag);
+      }
       projectsListEl.appendChild(lbl);
     });
   }
