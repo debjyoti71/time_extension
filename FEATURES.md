@@ -22,6 +22,18 @@ Unlike basic activity timers that continuously increment whenever VS Code is ope
 
 ---
 
+## 🔄 Multi-Instance & Cross-Editor Synchronization
+
+Developers frequently run multiple editors simultaneously (e.g. VS Code alongside Antigravity, or multiple VS Code windows for different microservices). **Dev Timekeeper v1.1.0** introduces a zero-conflict multi-instance coordination layer:
+
+- **Active Session Lease (`active_session.json`)**: Whenever you focus, type, or save a file in any IDE window, that window immediately claims the active session. Other open windows detect the lease and pause tracking, guaranteeing that 1 physical hour of coding strictly counts as 1 hour—with zero double-counting or parallel inflation.
+- **Atomic Mutex & Deadlock Immunity (`data.json.lock`)**: High-throughput file locking using OS-level exclusive file creation with exponential backoff and automatic 3-second stale lock reclamation. Eliminates race conditions, write collisions, and Windows `EBUSY` file errors.
+- **Singleton Heartbeat Manager**: Background Win32 idle monitoring automatically elects a single active daemon across all open windows, eliminating duplicate PowerShell processes.
+- **Strict 3,600s Clock Hour Boundary**: Mathematical clamping ensures that an hour bucket on any calendar day never exceeds 3,600 seconds, keeping hourly productivity heatmaps physically accurate.
+- **Live Cross-Instance Dashboard Sync**: The webview dashboard panel automatically detects database updates from other windows and debounces a live refresh.
+
+---
+
 ## 🗂️ Project Groups & Multi-Repo Aggregation
 
 Many real-world projects span multiple repositories, microservices, or versioned directories (e.g. `frontend`, `backend`, `v2`, `v3`). Rather than splitting your metrics into fragmented rows, **Dev Timekeeper** provides native project grouping:

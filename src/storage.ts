@@ -16,7 +16,77 @@ export interface TrackingData {
 }
 
 const DATA_DIR = path.join(os.homedir(), '.vscode-time-tracker');
-const DATA_FILE = path.join(DATA_DIR, 'data.json');
+export const DATA_FILE = path.join(DATA_DIR, 'data.json');
+const DATA_LOCK_FILE = path.join(DATA_DIR, 'data.json.lock');
+const LOCK_STALE_MS = 3000;
+const MAX_LOCK_RETRIES = 20;
+
+function sleepSync(ms: number): void {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    // short synchronous pause for microsecond file contention
+  }
+}
+
+function acquireLock(): boolean {
+  ensureDir();
+  for (let attempt = 0; attempt < MAX_LOCK_RETRIES; attempt++) {
+    try {
+      const fd = fs.openSync(DATA_LOCK_FILE, 'wx');
+      fs.writeFileSync(fd, `${process.pid}:${Date.now()}`, 'utf8');
+      fs.closeSync(fd);
+      return true;
+    } catch (err: any) {
+      if (err && err.code === 'EEXIST') {
+        try {
+          const stat = fs.statSync(DATA_LOCK_FILE);
+          if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) {
+            // Stale lock detected (process crashed or exited abruptly)
+            fs.unlinkSync(DATA_LOCK_FILE);
+            continue;
+          }
+        } catch {
+          // Lock was released in the meantime
+          continue;
+        }
+        sleepSync(10 + Math.floor(Math.random() * 15));
+      } else {
+        return false;
+      }
+    }
+  }
+  // Force break lock if still stuck after retries to prevent deadlock
+  try {
+    fs.unlinkSync(DATA_LOCK_FILE);
+    const fd = fs.openSync(DATA_LOCK_FILE, 'wx');
+    fs.writeFileSync(fd, `${process.pid}:${Date.now()}`, 'utf8');
+    fs.closeSync(fd);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function releaseLock(): void {
+  try {
+    if (fs.existsSync(DATA_LOCK_FILE)) {
+      fs.unlinkSync(DATA_LOCK_FILE);
+    }
+  } catch {
+    // Ignore cleanup error
+  }
+}
+
+export function withLock<T>(fn: () => T): T {
+  const acquired = acquireLock();
+  try {
+    return fn();
+  } finally {
+    if (acquired) {
+      releaseLock();
+    }
+  }
+}
 
 function ensureDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -83,44 +153,74 @@ export function load(): TrackingData {
   if (!fs.existsSync(DATA_FILE)) {
     return { files: {} };
   }
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    if (normalizeData(data)) { save(data); }
-    return data;
-  } catch {
-    return { files: {} };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      if (normalizeData(data)) { save(data); }
+      return data;
+    } catch {
+      sleepSync(10);
+    }
   }
+  return { files: {} };
 }
 
 export function save(data: TrackingData): void {
   ensureDir();
-  const tmp = DATA_FILE + '.tmp';
+  const tmp = DATA_FILE + '.' + process.pid + '.' + Date.now() + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
   if (fs.existsSync(DATA_FILE)) {
-    fs.copyFileSync(DATA_FILE, DATA_FILE + '.backup');
+    try {
+      fs.copyFileSync(DATA_FILE, DATA_FILE + '.backup');
+    } catch {
+      // ignore backup contention
+    }
   }
-  fs.renameSync(tmp, DATA_FILE);
+  // Windows-safe rename with retry
+  let replaced = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.renameSync(tmp, DATA_FILE);
+      replaced = true;
+      break;
+    } catch {
+      sleepSync(15);
+    }
+  }
+  if (!replaced) {
+    try {
+      fs.copyFileSync(tmp, DATA_FILE);
+      fs.unlinkSync(tmp);
+    } catch {
+      // fallback
+    }
+  }
 }
 
 export function addTime(filePath: string, seconds: number, project?: string): void {
-  const data = load();
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const hour = now.getHours();
-  if (!data.files[filePath]) {
-    data.files[filePath] = { total: 0, dailyTotal: {}, dailyHours: {}, lastActive: Date.now() };
-  }
-  const rec = data.files[filePath];
-  rec.total += seconds;
-  rec.dailyTotal[today] = (rec.dailyTotal[today] || 0) + seconds;
-  if (!rec.dailyHours) { rec.dailyHours = {}; }
-  if (!rec.dailyHours[today]) { rec.dailyHours[today] = {}; }
-  rec.dailyHours[today][hour] = (rec.dailyHours[today][hour] || 0) + seconds;
-  rec.lastActive = Date.now();
-  if (project) { rec.project = project; }
-  save(data);
+  withLock(() => {
+    const data = load();
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const hour = now.getHours();
+    if (!data.files[filePath]) {
+      data.files[filePath] = { total: 0, dailyTotal: {}, dailyHours: {}, lastActive: Date.now() };
+    }
+    const rec = data.files[filePath];
+    rec.total += seconds;
+    rec.dailyTotal[today] = (rec.dailyTotal[today] || 0) + seconds;
+    if (!rec.dailyHours) { rec.dailyHours = {}; }
+    if (!rec.dailyHours[today]) { rec.dailyHours[today] = {}; }
+    rec.dailyHours[today][hour] = (rec.dailyHours[today][hour] || 0) + seconds;
+    rec.lastActive = Date.now();
+    if (project) { rec.project = project; }
+    save(data);
+  });
 }
 
 export function resetAll(): void {
-  save({ files: {} });
+  withLock(() => {
+    save({ files: {} });
+  });
 }

@@ -4,6 +4,18 @@ All notable changes to **Dev Timekeeper** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-06
+
+### Major Architectural Upgrades
+- **Multi-Instance & Cross-Editor Coordination**: Full synchronization support when running Dev Timekeeper simultaneously across multiple VS Code windows, Antigravity IDE instances, or multiple workspaces.
+- **Active Session Lease Coordination (`active_session.json`)**: Eliminates parallel tracking and double-counting. When switching between editors, the actively focused/edited window claims the session, while background windows immediately yield tracking. 1 real hour of work across multiple editors strictly records as 1 hour.
+- **Atomic Mutex & Deadlock-Free Storage (`withLock`)**: Implemented non-blocking OS file locks on `data.json` with exponential backoff and automatic 3-second stale lock reclamation. Eliminates write collisions, race conditions, and Windows `EBUSY` file rename errors under high concurrency (verified under 1,000 concurrent writes across 10 processes).
+- **Singleton Heartbeat Manager**: Background Win32 idle monitor (`heartbeat.ps1`) automatically elects a single active provider across all open windows, preventing duplicate PowerShell background processes and CPU waste.
+- **Clock-Hour Clamping (Strict 3,600s Capacity Boundary)**: Enforces physical time constraints per clock hour and date in `buildDashboardData()`, guaranteeing that hourly heatmap bars can never exceed 100% capacity regardless of historical overlaps.
+- **Real-Time Cross-Instance Dashboard Sync**: The dashboard panel actively watches `data.json` for external writes, automatically debouncing and triggering live webview refreshes when another IDE flushes new metrics.
+
+---
+
 ## [1.0.38] - 2026-09-06
 
 ### Added

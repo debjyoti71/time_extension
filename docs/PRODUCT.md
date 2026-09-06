@@ -30,6 +30,7 @@ Runs continuously inside the VS Code Extension Host. A lightweight PowerShell pr
 - **Section Visibility Control**: Toggleable dashboard sections with preferences saved to `~/.vscode-time-tracker/settings.json`.
 - **Multi-Repo Snapshots**: Exports 7-day, 30-day, or custom multi-repo summaries as `.json` and `.md`.
 - **Project Groups**: Combines multi-repo workspaces, microservices, and versioned iterations into unified project rollups across charts, tables, and share cards, stored safely in `~/.vscode-time-tracker/groups.json`.
+- **Multi-Instance Coordination**: Coordinates active leases across multiple VS Code/Antigravity windows via `active_session.json` and atomic OS mutex `data.json.lock` with auto-stale recovery.
 - **Date Handling**: Uses UTC dates (`YYYY-MM-DD`) for consistency across session logs.
 - **No External Dependencies**: Bundled local Chart.js 4.4.0 and chartjs-chart-treemap scripts; operates entirely offline.
 

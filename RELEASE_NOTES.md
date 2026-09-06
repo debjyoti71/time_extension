@@ -1,6 +1,6 @@
-# ⏱️ Dev Timekeeper v1.0.38
+# ⏱️ Dev Timekeeper v1.1.0
 
-[![Version](https://img.shields.io/badge/version-1.0.38-green.svg)](https://github.com/debjyoti71/time_extension/releases/tag/v1.0.38)
+[![Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/debjyoti71/time_extension/releases/tag/v1.1.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/debjyoti71/time_extension/blob/main/LICENSE)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20offline-brightgreen.svg)](#)
 [![Open VSX](https://img.shields.io/open-vsx/v/DebjyotiGhosh/dev-timekeeper.svg?color=blue)](https://open-vsx.org/extension/DebjyotiGhosh/dev-timekeeper)
@@ -10,27 +10,30 @@
 
 ---
 
-### 📦 Release Highlights & Changelog (v1.0.38)
+### 📦 Release Highlights & Changelog (v1.1.0)
 
-#### 🚀 Major Feature: Project Groups & Multi-Repo Aggregation
-- **Unified Project Tracking**: Combine multiple repos, microservices, and versioned iterations (e.g. `frontend`, `backend`, `v2`, `v3`) into a single tracked entity.
-- **Aggregated Dashboard Analytics**: Lifetime bar charts, share pie charts, 7-day stacked activity, 30-day trends, and weekly top 5 metrics now aggregate grouped projects seamlessly.
-- **Accordion Project Details Table**: View projects in grouped or individual mode with the new segmented toggle. Group rows expand to show sub-repo breakdowns with percentage progress bars.
-- **Smart Group Detection**: Automatic stem-detection heuristic suggests group combinations for related projects with one-click acceptance.
-- **Restructured Manage Groups Modal**: Modern UI/UX built with Lucide vector icons, segmented navigation tabs (`Active Groups` and `Create Group`), color palette presets with halos, and responsive folder cards.
-- **Delete Confirmation Dialog**: Built-in safety confirmation modal ensuring raw tracking records remain safe upon group deletion.
-- **Interactive Release Announcement Banner**: Top-docked notification bar with `!` badge, responsive centering, and an interactive spotlight tour guiding users directly to the feature.
-- **Share Card Rollup**: Export share card graphics with consolidated project group metrics.
+#### 🚀 Major Architectural Milestone: Multi-Instance & Cross-Editor Coordination
+- **Cross-Editor Synchronization**: Seamlessly track time across multiple VS Code windows, Antigravity IDE instances, and multi-root workspaces concurrently.
+- **Active Instance Lease (`active_session.json`)**: Eliminates time inflation and double-counting. The actively focused editor claims tracking, while background windows yield. 1 real hour of work across multiple windows strictly counts as 1 hour.
+- **Atomic Mutex & Deadlock Immunity (`withLock`)**: Non-blocking atomic OS lock on `data.json` with exponential backoff and 3-second auto-stale recovery. Stress-tested under 1,000 rapid concurrent operations across 10 processes with 100% data integrity and zero `EBUSY` crashes.
+- **Singleton Heartbeat Manager**: Single active Win32 idle monitor daemon across all open windows, eliminating duplicate PowerShell processes and reducing background CPU usage.
+- **Clock-Hour Boundary Clamping**: Strict physical 3,600s hourly boundary per day in dashboard aggregations, guaranteeing hourly heatmap bars never exceed 100% capacity.
+- **Live Cross-Instance Dashboard Sync**: The dashboard panel actively watches the database file to trigger live updates whenever another IDE writes to disk.
+
+#### 🗂️ Features from v1.0.38 Included:
+- **Project Groups & Multi-Repo Aggregation**: Combine multi-repo codebases, microservices, and versioned iterations into unified tracked projects.
+- **Accordion Project Details Table**: Toggle between Grouped and Individual views with sub-repo breakdown progress bars.
+- **Modern Management Modal**: Redesigned UI/UX with Lucide vector icons, curated swatches, and delete confirmation safeguards.
 
 ---
 
 ### 💻 Installation Instructions
 
 #### Option 1: Direct `.vsix` Package Install
-1. Scroll down to the **Assets** section of this release and download `dev-timekeeper-1.0.38.vsix`.
+1. Scroll down to the **Assets** section of this release and download `dev-timekeeper-1.1.0.vsix`.
 2. In VS Code or VSCodium, press `Ctrl+Shift+X` (or `Cmd+Shift+X`) to open the **Extensions** view.
 3. Click the `...` menu (top right corner of the Extensions panel) → select **Install from VSIX...**
-4. Select the downloaded `dev-timekeeper-1.0.38.vsix` file.
+4. Select the downloaded `dev-timekeeper-1.1.0.vsix` file.
 
 #### Option 2: Command Line (CLI)
 ```bash

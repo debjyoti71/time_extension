@@ -29,8 +29,68 @@ let heartbeatProc: ChildProcess | undefined;
 let pendingSeconds: number = 0;
 let lastTick: number = Date.now();
 let lastVSCodeActivityTime: number = Date.now();
+let savedExtensionPath: string | undefined;
 
-const HEARTBEAT_FILE = path.join(os.homedir(), '.vscode-time-tracker', 'heartbeat.json');
+const DATA_DIR = path.join(os.homedir(), '.vscode-time-tracker');
+const HEARTBEAT_FILE = path.join(DATA_DIR, 'heartbeat.json');
+const ACTIVE_SESSION_FILE = path.join(DATA_DIR, 'active_session.json');
+const INSTANCE_ID = `${process.pid}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+interface ActiveLease {
+  instanceId: string;
+  pid: number;
+  project?: string;
+  timestamp: number;
+}
+
+function claimActiveLease(): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const lease: ActiveLease = {
+      instanceId: INSTANCE_ID,
+      pid: process.pid,
+      project: currentProject,
+      timestamp: Date.now()
+    };
+    const tmp = ACTIVE_SESSION_FILE + '.' + process.pid + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(lease), 'utf8');
+    try {
+      fs.renameSync(tmp, ACTIVE_SESSION_FILE);
+    } catch {
+      try {
+        fs.copyFileSync(tmp, ACTIVE_SESSION_FILE);
+        fs.unlinkSync(tmp);
+      } catch {}
+    }
+  } catch {}
+}
+
+function isAnotherInstanceActive(): boolean {
+  try {
+    if (!fs.existsSync(ACTIVE_SESSION_FILE)) { return false; }
+    const raw = fs.readFileSync(ACTIVE_SESSION_FILE, 'utf8');
+    const lease: ActiveLease = JSON.parse(raw);
+    if (lease.instanceId && lease.instanceId !== INSTANCE_ID) {
+      // If another IDE instance touched code within the last 45 seconds, yield tracking to it
+      return (Date.now() - lease.timestamp) < 45 * 1000;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function isHeartbeatActive(): boolean {
+  try {
+    if (!fs.existsSync(HEARTBEAT_FILE)) { return false; }
+    const stat = fs.statSync(HEARTBEAT_FILE);
+    return (Date.now() - stat.mtimeMs) < 25 * 1000;
+  } catch {
+    return false;
+  }
+}
 
 function getSystemIdleMs(): number {
   try {
@@ -51,6 +111,7 @@ function isVSCodeInactive(): boolean {
 
 function recordVSCodeActivity(): void {
   lastVSCodeActivityTime = Date.now();
+  claimActiveLease();
   if (currentFile && !sessionStart && !isIdle() && !isVSCodeInactive()) {
     resumeCurrent();
   }
@@ -90,7 +151,7 @@ export function getElapsedToday(): number {
   for (const rec of Object.values(data.files)) {
     total += rec.dailyTotal[today] || 0;
   }
-  if (currentFile && sessionStart && !isIdle() && !isVSCodeInactive()) {
+  if (currentFile && sessionStart && !isIdle() && !isVSCodeInactive() && (!isAnotherInstanceActive() || vscode.window.state.focused)) {
     total += Math.floor((Date.now() - sessionStart) / 1000);
   }
   total += pendingSeconds;
@@ -110,8 +171,17 @@ function startHeartbeat(extensionPath: string): void {
   heartbeatProc.on('error', () => {});
 }
 
+function ensureHeartbeat(extensionPath?: string): void {
+  if (!extensionPath) { return; }
+  if (heartbeatProc && !heartbeatProc.killed) { return; }
+  // Singleton election: only spawn if heartbeat.json is not actively maintained by another instance
+  if (isHeartbeatActive()) { return; }
+  startHeartbeat(extensionPath);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
-  startHeartbeat(context.extensionPath);
+  savedExtensionPath = context.extensionPath;
+  ensureHeartbeat(savedExtensionPath);
   recordVSCodeActivity();
 
   const onFileChange = (editor: vscode.TextEditor | undefined) => {
@@ -139,7 +209,7 @@ export function activate(context: vscode.ExtensionContext): void {
           resumeCurrent();
         }
       } else {
-        // When VS Code is minimized or loses focus, pause continuous session accumulation to avoid sleep counting bugs
+        // When VS Code loses focus, flush pending. If another IDE takes focus, it will claim the lease.
         pauseCurrent();
         flushPending();
       }
@@ -165,20 +235,44 @@ export function activate(context: vscode.ExtensionContext): void {
       pauseCurrent();
       flushPending();
       if (!isIdle() && !isVSCodeInactive() && vscode.window.state.focused && currentFile) {
+        recordVSCodeActivity();
         resumeCurrent();
       }
       fireTick();
       return;
     }
 
-    if (isIdle() || isVSCodeInactive()) {
+    // Maintain singleton heartbeat if previous provider died
+    if (vscode.window.state.focused && !isHeartbeatActive()) {
+      ensureHeartbeat(savedExtensionPath);
+    }
+
+    if (isIdle()) {
+      if (sessionStart) {
+        pauseCurrent();
+        flushPending();
+      }
+    } else if (!vscode.window.state.focused && isAnotherInstanceActive()) {
+      // Another IDE instance is actively being typed in; yield tracking immediately
+      if (sessionStart) {
+        pauseCurrent();
+        flushPending();
+      }
+    } else if (isVSCodeInactive()) {
       if (sessionStart) {
         pauseCurrent();
         flushPending();
       }
     } else {
       if (currentFile) {
-        if (vscode.window.state.focused || (Date.now() - lastVSCodeActivityTime <= VSCODE_INACTIVITY_LIMIT_MS)) {
+        if (vscode.window.state.focused) {
+          claimActiveLease();
+          if (!sessionStart) { resumeCurrent(); }
+          pauseCurrent();
+          flushPending();
+          resumeCurrent();
+        } else if (Date.now() - lastVSCodeActivityTime <= VSCODE_INACTIVITY_LIMIT_MS) {
+          // Browser testing grace period: no other IDE claimed the active session
           if (!sessionStart) { resumeCurrent(); }
           pauseCurrent();
           flushPending();
@@ -201,5 +295,7 @@ export function deactivate(): void {
   pauseCurrent();
   flushPending();
   if (flushTimer) { clearInterval(flushTimer); }
-  if (heartbeatProc) { heartbeatProc.kill(); }
+  if (heartbeatProc && !heartbeatProc.killed) {
+    heartbeatProc.kill();
+  }
 }

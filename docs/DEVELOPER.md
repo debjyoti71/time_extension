@@ -110,8 +110,11 @@ if system idle → pauseCurrent() + flushPending()
 else           → pauseCurrent() + flushPending() + resumeCurrent()
 ```
 
-**Idle detection:**
-Reads `~/.vscode-time-tracker/heartbeat.json` written by `heartbeat.ps1`. If `idleMs > 300000` (5 min), considered idle.
+**Idle detection & Singleton Heartbeat:**
+Reads `~/.vscode-time-tracker/heartbeat.json` written by `heartbeat.ps1`. If `idleMs > 300000` (5 min), considered idle. Only a single singleton PowerShell heartbeat process is spawned across multiple open windows.
+
+**Active Instance Lease (`active_session.json`):**
+Coordinates active time across multiple editors (e.g. VS Code alongside Antigravity). When an editor window is focused or interacted with, it claims the active lease. Unfocused windows yield tracking when another IDE is actively in use, preventing parallel double-counting.
 
 **Workspace fallback:**
 If no file is open but a workspace folder exists, `currentFile` is set to `{workspaceRoot}/__workspace__` so terminal/browser time is still credited to the project.
@@ -119,7 +122,7 @@ If no file is open but a workspace folder exists, `currentFile` is set to `{work
 ---
 
 ### `storage.ts`
-Simple read/write wrapper for `~/.vscode-time-tracker/data.json`.
+High-concurrency read/write wrapper for `~/.vscode-time-tracker/data.json` protected by atomic OS file locks.
 
 **Data structure:**
 ```json
@@ -131,16 +134,22 @@ Simple read/write wrapper for `~/.vscode-time-tracker/data.json`.
         "2026-03-25": 1800,
         "2026-03-24": 1800
       },
+      "dailyHours": {
+        "2026-03-25": { "14": 1800 }
+      },
       "lastActive": 1742900000000
     }
   }
 }
 ```
 
-**Key function:**
+**Key functions:**
 ```ts
-addTime(filePath: string, seconds: number): void
-// loads data.json → adds seconds to total + dailyTotal[today] → saves
+withLock<T>(fn: () => T): T
+// Non-blocking OS mutex on data.json.lock with retry and 3s auto-stale recovery
+
+addTime(filePath: string, seconds: number, project?: string): void
+// Executes atomically inside withLock → loads fresh data.json → increments → saves
 ```
 
 All dates use `new Date().toISOString().slice(0, 10)` — **UTC dates**. This is consistent across reads and writes so there's no timezone mismatch.

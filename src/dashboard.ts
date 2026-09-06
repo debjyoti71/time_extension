@@ -85,6 +85,7 @@ function buildDashboardData() {
   let mostActiveProjSecs = 0;
   let mostActiveProj = '—';
   const hourTotals: number[] = new Array(24).fill(0); // seconds per hour bucket (last 30 days)
+  const dateHourMap: { [date: string]: { [hour: number]: number } } = {};
   let yesterdayTotal = 0;
   let prevWeekTotal = 0;
   let prevMonthTotal = 0;
@@ -133,11 +134,12 @@ function buildDashboardData() {
     if (dh) {
       for (const [date, hours] of Object.entries(dh)) {
         if (!last30Keys.has(date)) { continue; }
+        if (!dateHourMap[date]) { dateHourMap[date] = {}; }
         for (const [hStr, sec] of Object.entries(hours)) {
           const h = Number(hStr);
           if (!Number.isInteger(h) || h < 0 || h > 23) { continue; }
           const val = typeof sec === 'number' && Number.isFinite(sec) ? sec : 0;
-          hourTotals[h] += val;
+          dateHourMap[date][h] = (dateHourMap[date][h] || 0) + val;
         }
       }
     }
@@ -154,6 +156,15 @@ function buildDashboardData() {
     projectMap[project].rolling30Secs += last30WindowSecs;
     projectMap[project].last7Secs += last7SecsForProject;
     projectMap[project].lastActive = Math.max(projectMap[project].lastActive, rec.lastActive);
+  }
+
+  // Enforce strict physical boundary: at most 3,600 seconds can occur in any clock hour per day
+  for (const hours of Object.values(dateHourMap)) {
+    for (const [hStr, sec] of Object.entries(hours)) {
+      const h = Number(hStr);
+      const clamped = Math.min(3600, sec);
+      hourTotals[h] += clamped;
+    }
   }
 
   // hour of day — percent of that hour used on average (last 30 days)
@@ -385,8 +396,33 @@ export function show(context: vscode.ExtensionContext): void {
     { enableScripts: true, localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'media'))] }
   );
 
+  let liveUpdateDebounce: NodeJS.Timeout | undefined;
+  const schedulePushLiveData = () => {
+    if (liveUpdateDebounce) { clearTimeout(liveUpdateDebounce); }
+    liveUpdateDebounce = setTimeout(() => {
+      pushLiveData();
+    }, 400);
+  };
+
+  let fileWatcher: fs.FSWatcher | undefined;
+  try {
+    const dataDir = path.dirname(storage.DATA_FILE);
+    if (fs.existsSync(dataDir)) {
+      fileWatcher = fs.watch(dataDir, (eventType, filename) => {
+        if (filename === 'data.json') {
+          schedulePushLiveData();
+        }
+      });
+    }
+  } catch {}
+
   const unsubTick = onTick(() => pushLiveData());
-  panel.onDidDispose(() => { unsubTick(); panel = undefined; });
+  panel.onDidDispose(() => {
+    unsubTick();
+    if (fileWatcher) { fileWatcher.close(); }
+    if (liveUpdateDebounce) { clearTimeout(liveUpdateDebounce); }
+    panel = undefined;
+  });
 
   // listen for messages from webview
   panel.webview.onDidReceiveMessage(msg => {
