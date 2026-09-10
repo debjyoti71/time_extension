@@ -8,7 +8,13 @@
 </head>
 <body>
   <header class="header">
-    <h1>⏱️ Dev Timekeeper</h1>
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <h1>Dev Timekeeper</h1>
+        <p class="brand-subtitle">Your coding rhythm, in focus</p>
+      </div>
+    </div>
     <div class="header-actions">
       <span id="lastUpdated" class="last-updated"></span>
       <button id="feedbackBtn" class="action-btn" title="Submit feedback on Google Forms" style="position: relative;">
@@ -36,6 +42,19 @@
   </header>
 
   <main class="dashboard-main">
+    <section class="overview-hero" aria-labelledby="overviewTitle">
+      <div class="overview-copy">
+        <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Live workspace overview</div>
+        <h2 id="overviewTitle">Make time for the work that matters.</h2>
+        <p>See your momentum across projects, spot patterns, and keep your focus moving forward.</p>
+      </div>
+      <div class="workspace-context">
+        <span class="context-label">CURRENT CONTEXT</span>
+        <strong id="heroProject">Waiting for workspace</strong>
+        <span id="heroFile">Open a file to start tracking</span>
+      </div>
+    </section>
+
     <!-- Release Announcement Banner -->
     <div id="releaseBanner" class="release-banner hidden" role="region" aria-label="New feature announcement">
       <div class="release-banner-left">

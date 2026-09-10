@@ -80,6 +80,10 @@
     if (repo) { repo.textContent = data.currentProject || '(none — no workspace folder)'; }
     if (file) { file.textContent = data.currentFile || '(no active file)'; }
     if (session) { session.textContent = fmt(data.todayTotal); }
+    var heroProject = document.getElementById('heroProject');
+    var heroFile = document.getElementById('heroFile');
+    if (heroProject) { heroProject.textContent = data.currentProject || 'No workspace selected'; }
+    if (heroFile) { heroFile.textContent = data.currentFile || 'Open a file to start tracking'; }
   }
 
   function updateCards() {
