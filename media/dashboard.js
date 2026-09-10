@@ -84,6 +84,8 @@
     var heroFile = document.getElementById('heroFile');
     if (heroProject) { heroProject.textContent = data.currentProject || 'No workspace selected'; }
     if (heroFile) { heroFile.textContent = data.currentFile || 'Open a file to start tracking'; }
+    var trackingStatus = document.getElementById('trackingStatus');
+    if (trackingStatus) { trackingStatus.textContent = data.currentFile ? 'Active workspace' : 'Workspace overview'; }
   }
 
   function updateCards() {
@@ -96,7 +98,10 @@
     document.getElementById('avgPerDay').textContent      = fmt(data.avgPerDay);
     document.getElementById('totalProjects').textContent  = String(data.totalProjects || 0);
     document.getElementById('mostActiveProj').textContent = data.mostActiveProj || '--';
-    document.getElementById('lastUpdated').textContent    = 'Updated ' + new Date().toLocaleTimeString();
+    var syncTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    document.getElementById('lastUpdated').textContent = 'Updated ' + syncTime;
+    var heroLastUpdated = document.getElementById('heroLastUpdated');
+    if (heroLastUpdated) { heroLastUpdated.textContent = syncTime; }
     setDelta('todayDelta', data.todayTotal, data.yesterdayTotal, 'yesterday');
     setDelta('weekDelta', data.weekTotal, data.prevWeekTotal, 'last week');
     setDelta('monthDelta', data.monthTotal, data.prevMonthTotal, 'last month');

@@ -18,7 +18,8 @@
     <div class="header-actions">
       <span id="lastUpdated" class="last-updated"></span>
       <button id="feedbackBtn" class="action-btn" title="Submit feedback on Google Forms" style="position: relative;">
-        💬 Feedback
+        <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.6 9.6 0 0 1-4.2-1L3 20l1.3-4A8.2 8.2 0 0 1 3 11.5a9 9 0 0 1 18 0Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+        Feedback
         <span id="feedbackBadge" class="notification-badge hidden"></span>
       </button>
       <button id="shareCardBtn" class="action-btn" title="Generate a shareable card image">Share Card</button>
@@ -44,9 +45,10 @@
   <main class="dashboard-main">
     <section class="overview-hero" aria-labelledby="overviewTitle">
       <div class="overview-copy">
-        <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Live workspace overview</div>
-        <h2 id="overviewTitle">Make time for the work that matters.</h2>
-        <p>See your momentum across projects, spot patterns, and keep your focus moving forward.</p>
+        <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span id="trackingStatus">Workspace overview</span></div>
+        <h2 id="overviewTitle">Your work, in rhythm.</h2>
+        <p>Understand where your focus goes today and how it compounds over time.</p>
+        <div class="hero-meta"><span class="hero-meta-key">LAST SYNC</span><strong id="heroLastUpdated">Waiting for activity</strong></div>
       </div>
       <div class="workspace-context">
         <span class="context-label">CURRENT CONTEXT</span>
@@ -87,10 +89,10 @@
     </div>
 
     <div data-section="liveStats">
-      <div class="section-label">Live Stats</div>
+      <div class="section-label">At a glance <span class="section-rule"></span><span class="section-note">Your coding pulse</span></div>
       <div class="cards cards-4">
-        <div class="card">
-          <div class="card-label">Today</div>
+        <div class="card card-primary">
+          <div class="card-label">Today / Focus time</div>
           <div class="card-value accent-blue" id="todayTotal">--</div>
           <div class="card-delta" id="todayDelta"></div>
         </div>
