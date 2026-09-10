@@ -248,6 +248,64 @@ function buildDashboardData() {
   const avgPerDay     = activeDays > 0 ? Math.round(lifetimeSecs / activeDays) : 0;
   const totalProjects = folderRows.length;
 
+  // --- Streak Calculation ---
+  let currentStreak = 0;
+  let bestStreak = 0;
+  const sortedActiveDates = Array.from(activeDaysSet).sort();
+  if (sortedActiveDates.length > 0) {
+    let checkDate = new Date(now);
+    let checkDateStr = checkDate.toISOString().slice(0, 10);
+    if (!activeDaysSet.has(checkDateStr)) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      checkDateStr = checkDate.toISOString().slice(0, 10);
+    }
+    while (activeDaysSet.has(checkDateStr)) {
+      currentStreak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+      checkDateStr = checkDate.toISOString().slice(0, 10);
+    }
+    let tempStreak = 0;
+    let prevTimestamp: number | null = null;
+    for (const dStr of sortedActiveDates) {
+      const ts = new Date(dStr + 'T00:00:00Z').getTime();
+      if (prevTimestamp === null) {
+        tempStreak = 1;
+      } else {
+        const diffDays = Math.round((ts - prevTimestamp) / (24 * 3600 * 1000));
+        if (diffDays === 1) {
+          tempStreak++;
+        } else if (diffDays > 1) {
+          tempStreak = 1;
+        }
+      }
+      prevTimestamp = ts;
+      if (tempStreak > bestStreak) { bestStreak = tempStreak; }
+    }
+  }
+
+  // --- Weekday Coding Rhythm (Mon - Sun) ---
+  const weekdaySecs = [0, 0, 0, 0, 0, 0, 0]; // 0=Mon ... 6=Sun
+  const weekdayActiveDays = [0, 0, 0, 0, 0, 0, 0];
+  const weekdayDaySet = new Set<string>();
+  for (const rec of Object.values(data.files)) {
+    for (const [dateStr, secs] of Object.entries(rec.dailyTotal || {})) {
+      if (secs <= 0) { continue; }
+      const d = new Date(dateStr + 'T00:00:00Z');
+      const jsDay = d.getUTCDay();
+      const dayIdx = jsDay === 0 ? 6 : jsDay - 1;
+      weekdaySecs[dayIdx] += secs;
+      if (!weekdayDaySet.has(`${dateStr}_${dayIdx}`)) {
+        weekdayDaySet.add(`${dateStr}_${dayIdx}`);
+        weekdayActiveDays[dayIdx]++;
+      }
+    }
+  }
+  const weekdayHours = weekdaySecs.map((s, idx) => +(s / 3600).toFixed(1));
+  const weekdayAverages = weekdaySecs.map((s, idx) => {
+    const days = Math.max(1, weekdayActiveDays[idx]);
+    return +(s / 3600 / days).toFixed(1);
+  });
+
   // --- Project Groups Integration ---
   const groupsData = loadGroups();
   const folderToGroup = getFolderToGroupMap(groupsData.groups);
@@ -377,6 +435,8 @@ function buildDashboardData() {
     todayTotal, weekTotal, monthTotal, lifetimeSecs,
     yesterdayTotal, prevWeekTotal, prevMonthTotal,
     activeDays, avgPerDay, totalProjects, mostActiveProj,
+    streak: { current: currentStreak, best: bestStreak, totalActive: activeDays },
+    weekdayAverages, weekdayHours,
     currentProject: getCurrentProject() ?? null,
     currentFile: (() => {
       const f = getCurrentFile() ?? vscode.window.activeTextEditor?.document.uri.fsPath;

@@ -8,20 +8,25 @@
 </head>
 <body>
   <header class="header">
-    <h1>⏱️ Dev Timekeeper</h1>
+    <h1>
+      <svg class="icon-lucide text-primary" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Dev Timekeeper</span>
+    </h1>
     <div class="header-actions">
       <span id="lastUpdated" class="last-updated"></span>
-      <button id="feedbackBtn" class="action-btn" title="Submit feedback on Google Forms" style="position: relative;">
-        💬 Feedback
+      <button id="feedbackBtn" class="action-btn feedback-btn" title="Submit feedback on Google Forms">
+        <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Feedback</span>
         <span id="feedbackBadge" class="notification-badge hidden"></span>
       </button>
       <button id="shareCardBtn" class="action-btn" title="Generate a shareable card image">Share Card</button>
       <div class="menu-wrap">
-        <button id="menuBtn" class="menu-btn" title="Show/Hide sections" aria-expanded="false" aria-controls="menuDropdown">&#8943;</button>
+        <button id="menuBtn" class="menu-btn" title="Show/Hide sections" aria-expanded="false" aria-controls="menuDropdown">
+          <svg class="icon-lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
         <div id="menuDropdown" class="menu-dropdown hidden" role="menu">
           <div class="menu-label">Toggle Sections</div>
-          <label class="menu-item"><input type="checkbox" data-section="liveStats" checked> Live Stats</label>
-          <label class="menu-item"><input type="checkbox" data-section="lifetimeInsights" checked> Lifetime Insights</label>
+          <label class="menu-item"><input type="checkbox" data-section="liveStats" checked> Executive Metrics</label>
           <label class="menu-item"><input type="checkbox" data-section="projectsOverview" checked> Projects Overview</label>
           <label class="menu-item"><input type="checkbox" data-section="thisWeek" checked> This Week</label>
           <label class="menu-item"><input type="checkbox" data-section="trends" checked> Trends</label>
@@ -43,8 +48,8 @@
           <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
         </div>
         <div class="release-banner-text">
-          <span class="release-tag">NEW in v1.0.38</span>
-          <span class="release-desc">Project Grouping is here! Unify multi-repo & microservice tracking.</span>
+          <span class="release-tag">NEW in v1.1.0</span>
+          <span class="release-desc">Multi-Instance Coordination & Concurrency Engine is here! Zero double-counting across editors.</span>
         </div>
       </div>
       <div class="release-banner-right">
@@ -67,38 +72,64 @@
       </div>
     </div>
 
+    <!-- Unified 6-Card Hero Metric Strip -->
     <div data-section="liveStats">
-      <div class="section-label">Live Stats</div>
-      <div class="cards cards-4">
-        <div class="card">
-          <div class="card-label">Today</div>
-          <div class="card-value accent-blue" id="todayTotal">--</div>
-          <div class="card-delta" id="todayDelta"></div>
+      <div class="section-label">Executive Metrics</div>
+      <div class="hero-kpi-grid">
+        <div class="kpi-card kpi-card-today">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">Today</span>
+            <span class="kpi-badge kpi-delta-pill" id="todayDelta">--</span>
+          </div>
+          <div class="kpi-card-value accent-blue" id="todayTotal">--</div>
+          <div class="kpi-card-sub" id="todaySub">vs yesterday</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-blue-bar" id="todayBar"></div></div>
         </div>
-        <div class="card">
-          <div class="card-label">This Week</div>
-          <div class="card-value accent-green" id="weekTotal">--</div>
-          <div class="card-delta" id="weekDelta"></div>
+        <div class="kpi-card kpi-card-week">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">This Week</span>
+            <span class="kpi-badge kpi-delta-pill" id="weekDelta">--</span>
+          </div>
+          <div class="kpi-card-value accent-green" id="weekTotal">--</div>
+          <div class="kpi-card-sub" id="weekSub">vs last week</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-green-bar" id="weekBar"></div></div>
         </div>
-        <div class="card">
-          <div class="card-label">This Month</div>
-          <div class="card-value accent-yellow" id="monthTotal">--</div>
-          <div class="card-delta" id="monthDelta"></div>
+        <div class="kpi-card kpi-card-month">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">This Month</span>
+            <span class="kpi-badge kpi-delta-pill" id="monthDelta">--</span>
+          </div>
+          <div class="kpi-card-value accent-yellow" id="monthTotal">--</div>
+          <div class="kpi-card-sub" id="monthSub">vs last month</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-yellow-bar" id="monthBar"></div></div>
         </div>
-        <div class="card">
-          <div class="card-label">Lifetime</div>
-          <div class="card-value accent-purple" id="lifetimeTotal">--</div>
+        <div class="kpi-card kpi-card-lifetime">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">Lifetime</span>
+            <span class="kpi-badge accent-purple-badge">All-time</span>
+          </div>
+          <div class="kpi-card-value accent-purple" id="lifetimeTotal">--</div>
+          <div class="kpi-card-sub" id="lifetimeSub">total active hours</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-purple-bar" style="width:100%;"></div></div>
         </div>
-      </div>
-    </div>
-
-    <div data-section="lifetimeInsights">
-      <div class="section-label">Lifetime Insights</div>
-      <div class="cards cards-4">
-        <div class="card"><div class="card-label">Active Days</div><div class="card-value accent-blue" id="activeDays">--</div></div>
-        <div class="card"><div class="card-label">Avg / Active Day</div><div class="card-value accent-green" id="avgPerDay">--</div></div>
-        <div class="card"><div class="card-label">Total Projects</div><div class="card-value accent-yellow" id="totalProjects">--</div></div>
-        <div class="card"><div class="card-label">Top Project</div><div class="card-value accent-purple" id="mostActiveProj">--</div></div>
+        <div class="kpi-card kpi-card-pace">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">Daily Average</span>
+            <span class="kpi-badge accent-cyan-badge">Pace</span>
+          </div>
+          <div class="kpi-card-value accent-cyan" id="avgPerDay">--</div>
+          <div class="kpi-card-sub" id="avgPerDaySub">per active day</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-cyan-bar" id="avgBar"></div></div>
+        </div>
+        <div class="kpi-card kpi-card-streak">
+          <div class="kpi-card-header">
+            <span class="kpi-card-label">Coding Streak</span>
+            <span class="kpi-badge accent-orange-badge" id="streakBadge">Active</span>
+          </div>
+          <div class="kpi-card-value accent-orange" id="streakDays">--</div>
+          <div class="kpi-card-sub" id="streakSub">-- active days total</div>
+          <div class="kpi-card-bar-wrap"><div class="kpi-card-bar accent-orange-bar" id="streakBar"></div></div>
+        </div>
       </div>
     </div>
 
@@ -106,11 +137,17 @@
       <div class="section-label">Projects Overview</div>
       <div class="charts-row">
         <div class="chart-box">
-          <div class="chart-title">Top 10 Projects - Lifetime (h)</div>
-          <canvas id="barChart"></canvas>
+          <div class="chart-title-bar">
+            <div class="chart-title">Top 5 Projects - Lifetime</div>
+            <span class="chart-subtitle">Ranked by total hours</span>
+          </div>
+          <div id="topProjectsLeaderboard" class="leaderboard-wrap"></div>
         </div>
         <div class="chart-box">
-          <div class="chart-title">Share by Project</div>
+          <div class="chart-title-bar">
+            <div class="chart-title">Share by Project</div>
+            <span class="chart-subtitle">Proportional distribution</span>
+          </div>
           <div class="pie-container">
             <div class="pie-canvas-wrap">
               <canvas id="pieChart"></canvas>
@@ -129,12 +166,21 @@
       <div class="section-label">This Week</div>
       <div class="charts-row">
         <div class="chart-box">
-          <div class="chart-title">Daily Coding Time - Last 7 Days by Project</div>
+          <div class="chart-title-bar chart-title-bar-row">
+            <div>
+              <div class="chart-title">Daily Coding Time - Last 7 Days</div>
+              <span class="chart-subtitle">Project activity by day</span>
+            </div>
+            <div id="l7ProjectFilters" class="bklit-pill-filters"></div>
+          </div>
           <canvas id="lineChart"></canvas>
         </div>
         <div class="chart-box">
-          <div class="chart-title">Top 5 Projects This Week (h)</div>
-          <canvas id="weekBarChart"></canvas>
+          <div class="chart-title-bar">
+            <div class="chart-title">Top Projects This Week</div>
+            <span class="chart-subtitle">Focus time distribution (Mon - Sun)</span>
+          </div>
+          <canvas id="weekdayChart"></canvas>
         </div>
       </div>
     </div>
@@ -143,11 +189,40 @@
       <div class="section-label">Trends</div>
       <div class="charts-row">
         <div class="chart-box">
-          <div class="chart-title">Last 30 Days - Activity by Project (h)</div>
-          <canvas id="heatmapChart"></canvas>
+          <div class="chart-title-bar chart-title-bar-row">
+            <div>
+              <div class="chart-title">Last 30 Days - Daily Momentum</div>
+              <span class="chart-subtitle">Daily activity volume with 7-day trendline</span>
+            </div>
+            <div class="bklit-view-toggle">
+              <button class="bklit-toggle-btn active" id="l30BarsBtn" title="Daily Volume Bars">Bars</button>
+              <button class="bklit-toggle-btn" id="l30HeatmapBtn" title="Activity Heatmap Matrix">Heatmap</button>
+            </div>
+          </div>
+          <div id="l30ChartWrap">
+            <canvas id="heatmapChart"></canvas>
+          </div>
+          <div id="l30HeatmapWrap" class="hidden">
+            <div id="bklitHeatmapGrid" class="bklit-heatmap-grid"></div>
+            <div class="bklit-heatmap-footer">
+              <span class="bklit-heatmap-stats" id="heatmapStats">30 days tracked</span>
+              <div class="bklit-heatmap-legend">
+                <span>Less</span>
+                <span class="heat-box lvl-0"></span>
+                <span class="heat-box lvl-1"></span>
+                <span class="heat-box lvl-2"></span>
+                <span class="heat-box lvl-3"></span>
+                <span class="heat-box lvl-4"></span>
+                <span>More</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="chart-box">
-          <div class="chart-title">Last 6 Months (h)</div>
+          <div class="chart-title-bar">
+            <div class="chart-title">Last 6 Months Momentum</div>
+            <span class="chart-subtitle">Monthly volume trajectory & growth</span>
+          </div>
           <canvas id="monthChart"></canvas>
         </div>
       </div>
@@ -156,7 +231,10 @@
     <div data-section="codingPatterns">
       <div class="section-label">Coding Patterns</div>
       <div class="chart-box full-width">
-        <div class="chart-title">Coding by Hour of Day</div>
+        <div class="chart-title-bar">
+          <div class="chart-title">Coding by Hour of Day</div>
+          <span class="chart-subtitle">24-hour focus distribution (00:00 - 23:00)</span>
+        </div>
         <canvas id="hourChart"></canvas>
       </div>
     </div>
@@ -173,14 +251,24 @@
       <div class="table-box">
         <div class="table-header">
           <div class="table-title-group">
-            <span class="chart-title">Project Details</span>
+            <span class="chart-title">Project Explorer</span>
             <div class="view-toggle" id="groupViewToggle">
               <button class="toggle-pill active" id="viewGroupedBtn" title="Grouped projects view">Grouped</button>
               <button class="toggle-pill" id="viewIndividualBtn" title="Individual folders view">Individual</button>
             </div>
+            <div class="display-toggle" id="displayViewToggle">
+              <button class="toggle-icon-pill active" id="displayCardsBtn" title="Card Grid View">
+                <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                <span>Cards</span>
+              </button>
+              <button class="toggle-icon-pill" id="displayTableBtn" title="Table View">
+                <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
+                <span>Table</span>
+              </button>
+            </div>
           </div>
           <div class="table-controls">
-            <input id="filterInput" placeholder="Filter project..." aria-label="Filter projects" />
+            <input id="filterInput" placeholder="Filter projects..." aria-label="Filter projects" />
             <button id="manageGroupsBtn" class="action-btn-sm" title="Create and manage project groups">
               <svg class="icon-lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
               <span>Manage Groups</span>
@@ -211,7 +299,11 @@
           </div>
         </div>
 
-        <table>
+        <!-- Project Cards Grid Container (Default Modern View) -->
+        <div id="projectCardsGrid" class="project-cards-grid"></div>
+
+        <!-- Table View (Alternative) -->
+        <table id="projectDataTable" class="hidden">
           <thead>
             <tr>
               <th data-col="name">Project</th>

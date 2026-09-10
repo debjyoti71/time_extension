@@ -34,6 +34,29 @@
   }
   function fmtDiff(secs) { return secs > 0 ? fmt(secs) : '0m'; }
   function hrs(secs) { if (!secs || isNaN(secs)) { return 0; } return +(secs / 3600).toFixed(1); }
+  function fmtHours(hVal) {
+    if (hVal === null || hVal === undefined || isNaN(hVal) || hVal <= 0) { return '0m'; }
+    const totalSecs = Math.round(hVal * 3600);
+    const h = Math.floor(totalSecs / 3600), m = Math.floor((totalSecs % 3600) / 60);
+    return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
+  }
+
+  function hexToRgba(hex, alpha) {
+    if (!hex || typeof hex !== 'string' || hex[0] !== '#') {
+      return 'rgba(97, 175, 239, ' + alpha + ')';
+    }
+    var r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length >= 7) {
+      r = parseInt(hex.slice(1, 3), 16);
+      g = parseInt(hex.slice(3, 5), 16);
+      b = parseInt(hex.slice(5, 7), 16);
+    }
+    return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+  }
 
   const scaleOpts = function(unit) {
     return {
@@ -43,24 +66,93 @@
   };
 
   const charts = {};
-  function makeChart(id, config) {
+  function makeChart(id, config, plugins) {
     if (charts[id]) { charts[id].destroy(); }
     const el = document.getElementById(id);
     if (!el) { return; }
+    if (plugins && plugins.length) {
+      config.plugins = (config.plugins || []).concat(plugins);
+    }
     charts[id] = new Chart(el, config);
   }
 
-  function setDelta(elId, current, prev, label) {
-    const el = document.getElementById(elId);
-    if (!el) { return; }
+  // Bklit Ghost Column Track Canvas Plugin
+  const bklitBarGhostPlugin = {
+    id: 'bklitBarGhost',
+    beforeDatasetsDraw: function(chart) {
+      let barMeta = null;
+      for (let i = 0; i < chart.data.datasets.length; i++) {
+        const m = chart.getDatasetMeta(i);
+        if (m && m.type === 'bar' && m.data && m.data.length) {
+          barMeta = m;
+          break;
+        }
+      }
+      if (!barMeta || !barMeta.data || !barMeta.data.length) { return; }
+      const ctx = chart.ctx;
+      const top = chart.chartArea.top;
+      const bottom = chart.chartArea.bottom;
+      const height = bottom - top;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      barMeta.data.forEach(function(bar) {
+        if (!bar || bar.x === undefined) { return; }
+        const x = bar.x;
+        const width = Math.min(bar.width || 24, 38);
+        const r = 5;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(x - width / 2, top, width, height, r);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x - width / 2, top, width, height);
+        }
+      });
+      ctx.restore();
+    }
+  };
+
+  // Bklit Horizontal Ghost Track Canvas Plugin
+  const bklitHorizontalBarGhostPlugin = {
+    id: 'bklitHorizontalBarGhost',
+    beforeDatasetsDraw: function(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) { return; }
+      const ctx = chart.ctx;
+      const xLeft = chart.chartArea.left;
+      const xRight = chart.chartArea.right;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      meta.data.forEach(function(bar) {
+        const y = bar.y;
+        const height = Math.min(bar.height || 26, 32);
+        const r = 5;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(xLeft, y - height / 2, xRight - xLeft, height, r);
+          ctx.fill();
+        } else {
+          ctx.fillRect(xLeft, y - height / 2, xRight - xLeft, height);
+        }
+      });
+      ctx.restore();
+    }
+  };
+
+  function setDelta(pillId, current, prev, label, subId) {
+    const pillEl = document.getElementById(pillId);
+    const subEl = document.getElementById(subId);
+    if (!pillEl) { return; }
     if (!prev && !current) {
-      el.textContent = 'No previous data';
-      el.className = 'card-delta delta-neutral';
+      pillEl.textContent = '0.0%';
+      pillEl.className = 'kpi-badge kpi-delta-pill delta-neutral';
+      if (subEl) { subEl.textContent = 'no previous data'; }
       return;
     }
     if (!prev) {
-      el.textContent = '▲ ' + fmtDiff(current) + ' vs ' + label + ' (0)';
-      el.className = 'card-delta delta-up';
+      pillEl.textContent = '▲ 100%';
+      pillEl.className = 'kpi-badge kpi-delta-pill delta-up';
+      if (subEl) { subEl.textContent = `vs ${label} (0m · +${fmt(current)})`; }
       return;
     }
     const diff = current - prev;
@@ -69,8 +161,15 @@
     const sign = diff >= 0 ? '+' : '-';
     const pctStr = Math.abs(pct).toFixed(1);
     const diffStr = fmtDiff(Math.abs(diff));
-    el.textContent = `${arrow} ${sign}${diffStr} (${sign}${pctStr}%) vs ${label} (${fmt(prev)})`;
-    el.className = 'card-delta ' + (diff >= 0 ? 'delta-up' : 'delta-down');
+
+    // Compact pill badge in header
+    pillEl.textContent = `${arrow} ${pctStr}%`;
+    pillEl.className = 'kpi-badge kpi-delta-pill ' + (diff >= 0 ? 'delta-up' : 'delta-down');
+
+    // Clean detailed comparative context in the subline
+    if (subEl) {
+      subEl.textContent = `vs ${label} (${fmt(prev)} · ${sign}${diffStr})`;
+    }
   }
 
   function updateDevBar() {
@@ -84,18 +183,69 @@
 
   function updateCards() {
     if (!data) { return; }
-    document.getElementById('todayTotal').textContent     = fmt(data.todayTotal);
-    document.getElementById('weekTotal').textContent      = fmt(data.weekTotal);
-    document.getElementById('monthTotal').textContent     = fmt(data.monthTotal);
-    document.getElementById('lifetimeTotal').textContent  = fmt(data.lifetimeSecs);
-    document.getElementById('activeDays').textContent     = (data.activeDays || 0) + ' days';
-    document.getElementById('avgPerDay').textContent      = fmt(data.avgPerDay);
-    document.getElementById('totalProjects').textContent  = String(data.totalProjects || 0);
-    document.getElementById('mostActiveProj').textContent = data.mostActiveProj || '--';
-    document.getElementById('lastUpdated').textContent    = 'Updated ' + new Date().toLocaleTimeString();
-    setDelta('todayDelta', data.todayTotal, data.yesterdayTotal, 'yesterday');
-    setDelta('weekDelta', data.weekTotal, data.prevWeekTotal, 'last week');
-    setDelta('monthDelta', data.monthTotal, data.prevMonthTotal, 'last month');
+    const todayEl = document.getElementById('todayTotal');
+    const weekEl = document.getElementById('weekTotal');
+    const monthEl = document.getElementById('monthTotal');
+    const lifetimeEl = document.getElementById('lifetimeTotal');
+    const avgEl = document.getElementById('avgPerDay');
+    const streakEl = document.getElementById('streakDays');
+    const streakSubEl = document.getElementById('streakSub');
+    const streakBadgeEl = document.getElementById('streakBadge');
+    const updatedEl = document.getElementById('lastUpdated');
+
+    if (todayEl) { todayEl.textContent = fmt(data.todayTotal); }
+    if (weekEl) { weekEl.textContent = fmt(data.weekTotal); }
+    if (monthEl) { monthEl.textContent = fmt(data.monthTotal); }
+    if (lifetimeEl) { lifetimeEl.textContent = fmt(data.lifetimeSecs); }
+    if (avgEl) { avgEl.textContent = fmt(data.avgPerDay); }
+
+    const streak = data.streak || { current: 0, best: 0, totalActive: data.activeDays || 0 };
+    if (streakEl) {
+      streakEl.textContent = streak.current + (streak.current === 1 ? ' day' : ' days');
+    }
+    if (streakSubEl) {
+      streakSubEl.textContent = 'Best: ' + (streak.best || 0) + 'd · ' + (data.activeDays || 0) + ' active days';
+    }
+    if (streakBadgeEl) {
+      streakBadgeEl.textContent = streak.current > 0 ? (streak.current + 'd streak') : 'Inactive';
+      streakBadgeEl.className = 'kpi-badge ' + (streak.current > 0 ? 'accent-orange-badge' : 'accent-muted-badge');
+    }
+    if (updatedEl) {
+      updatedEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }
+
+    setDelta('todayDelta', data.todayTotal, data.yesterdayTotal, 'yesterday', 'todaySub');
+    setDelta('weekDelta', data.weekTotal, data.prevWeekTotal, 'last week', 'weekSub');
+    setDelta('monthDelta', data.monthTotal, data.prevMonthTotal, 'last month', 'monthSub');
+
+    // Update pacing bars
+    const todayBar = document.getElementById('todayBar');
+    const weekBar = document.getElementById('weekBar');
+    const monthBar = document.getElementById('monthBar');
+    const avgBar = document.getElementById('avgBar');
+    const streakBar = document.getElementById('streakBar');
+
+    if (todayBar) {
+      const todayGoal = 8 * 3600;
+      todayBar.style.width = Math.min(100, Math.round(((data.todayTotal || 0) / todayGoal) * 100)) + '%';
+    }
+    if (weekBar) {
+      const weekGoal = 40 * 3600;
+      weekBar.style.width = Math.min(100, Math.round(((data.weekTotal || 0) / weekGoal) * 100)) + '%';
+    }
+    if (monthBar) {
+      const monthGoal = 160 * 3600;
+      monthBar.style.width = Math.min(100, Math.round(((data.monthTotal || 0) / monthGoal) * 100)) + '%';
+    }
+    if (avgBar) {
+      const avgGoal = 8 * 3600;
+      avgBar.style.width = Math.min(100, Math.round(((data.avgPerDay || 0) / avgGoal) * 100)) + '%';
+    }
+    if (streakBar) {
+      const best = Math.max(streak.best || 1, streak.current || 1, 1);
+      streakBar.style.width = Math.min(100, Math.round(((streak.current || 0) / best) * 100)) + '%';
+    }
+
     updateDevBar();
   }
 
@@ -179,6 +329,541 @@
 
   let groupMode = true;
 
+  function drawLeaderboard(top5, lifetimeSecs, allRows) {
+    const el = document.getElementById('topProjectsLeaderboard');
+    if (!el) { return; }
+    if (!top5 || !top5.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:30px 0;font-size:12px;">No projects recorded yet</div>';
+      return;
+    }
+    const totalSecs = lifetimeSecs || (allRows || top5).reduce(function(s, r) { return s + (r.totalSecs || 0); }, 0) || 1;
+
+    let html = '';
+    let top5TotalSecs = 0;
+    const distSegments = [];
+
+    top5.forEach(function(r, idx) {
+      const rank = idx + 1;
+      const secs = r.totalSecs || 0;
+      top5TotalSecs += secs;
+      const sharePctVal = totalSecs > 0 ? ((secs / totalSecs) * 100) : 0;
+      const sharePctStr = sharePctVal.toFixed(1);
+      // Bar width directly matches its actual percentage of lifetime time
+      const barPct = Math.max(2, Math.min(100, sharePctVal));
+      const color = r.color || C[idx % C.length];
+
+      distSegments.push({ width: sharePctVal, color: color, name: r.name });
+
+      html += '<div class="leaderboard-row">'
+        + '<div class="leaderboard-rank">#' + rank + '</div>'
+        + '<div class="leaderboard-name-wrap">'
+        + '<span class="leaderboard-dot" style="background:' + color + ';"></span>'
+        + '<span class="leaderboard-name" title="' + r.name + '">' + r.name + '</span>'
+        + '</div>'
+        + '<div class="leaderboard-bar-track">'
+        + '<div class="leaderboard-bar-fill" style="width:' + barPct.toFixed(1) + '%; background:' + color + ';"></div>'
+        + '</div>'
+        + '<div class="leaderboard-stats">'
+        + '<span class="leaderboard-hours">' + fmt(secs) + '</span>'
+        + '<span class="leaderboard-pct">' + sharePctStr + '%</span>'
+        + '</div>'
+        + '</div>';
+    });
+
+    const top5PctVal = Math.min(100, totalSecs > 0 ? ((top5TotalSecs / totalSecs) * 100) : 0);
+    const top5PctStr = top5PctVal.toFixed(1);
+    const othersSecs = Math.max(0, totalSecs - top5TotalSecs);
+    const othersPctVal = Math.max(0, 100 - top5PctVal);
+    const othersPctStr = othersPctVal.toFixed(1);
+    const totalProjectsCount = (allRows && allRows.length) ? allRows.length : top5.length;
+    const othersCount = Math.max(0, totalProjectsCount - top5.length);
+
+    if (othersPctVal > 0.05) {
+      distSegments.push({ width: othersPctVal, color: '#5c6370', name: 'Others' });
+    }
+
+    // Bottom aggregate distribution track & summary
+    html += '<div class="leaderboard-footer">'
+      + '<div class="lead-dist-track" title="Top 5: ' + top5PctStr + '% · Others: ' + othersPctStr + '%">'
+      + distSegments.map(function(seg) {
+          return '<div class="lead-dist-seg" style="width:' + seg.width.toFixed(1) + '%; background:' + seg.color + ';" title="' + seg.name + ': ' + seg.width.toFixed(1) + '%"></div>';
+        }).join('')
+      + '</div>'
+      + '<div class="lead-footer-meta">'
+      + '<span class="lead-footer-label">Top 5 account for <strong>' + top5PctStr + '%</strong> (' + fmt(top5TotalSecs) + ')</span>'
+      + (othersCount > 0 ? '<span class="lead-footer-others">' + othersCount + ' other project' + (othersCount > 1 ? 's' : '') + ': ' + fmt(othersSecs) + ' (' + othersPctStr + '%)</span>' : '')
+      + '</div>'
+      + '</div>';
+
+    el.innerHTML = html;
+  }
+
+  function drawPieChart(effectiveDirTotals, effectiveFolderRows, lifetimeSecs) {
+    const allSortedEntries = Object.entries(effectiveDirTotals || {}).sort(function(a, b) { return b[1] - a[1]; });
+    const top5Entries = allSortedEntries.slice(0, 5);
+    const otherEntries = allSortedEntries.slice(5);
+    const othersTotalSecs = otherEntries.reduce(function(sum, x) { return sum + x[1]; }, 0);
+
+    let pieItems = top5Entries.map(function(x, i) {
+      var matchRow = (effectiveFolderRows || []).find(function(fr) { return fr.name === x[0]; });
+      var color = (matchRow && matchRow.color) || C[i % C.length];
+      return { name: x[0], secs: x[1], color: color };
+    });
+    if (othersTotalSecs > 0) {
+      pieItems.push({ name: 'Others (' + otherEntries.length + ')', secs: othersTotalSecs, color: '#5c6370' });
+    }
+
+    var pieColors = pieItems.map(function(x) { return x.color; });
+
+    if (charts['pieChart']) {
+      charts['pieChart'].pieItems = pieItems;
+      charts['pieChart'].data.labels = pieItems.map(function(x) { return x.name; });
+      charts['pieChart'].data.datasets[0].data = pieItems.map(function(x) { return hrs(x.secs); });
+      charts['pieChart'].data.datasets[0].backgroundColor = pieColors;
+      charts['pieChart'].data.datasets[0].hoverBackgroundColor = pieColors;
+      charts['pieChart'].update('none');
+    } else {
+      makeChart('pieChart', {
+        type: 'doughnut',
+        data: {
+          labels: pieItems.map(function(x) { return x.name; }),
+          datasets: [{
+            data: pieItems.map(function(x) { return hrs(x.secs); }),
+            backgroundColor: pieColors,
+            hoverBackgroundColor: pieColors,
+            borderWidth: 2,
+            borderColor: '#0e0e10',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          cutout: '62%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          },
+          onHover: function(evt, elements) {
+            var canvas = document.getElementById('pieChart');
+            if (canvas) { canvas.style.cursor = elements.length ? 'pointer' : 'default'; }
+            var legendItems = document.querySelectorAll('.pie-legend-item');
+            legendItems.forEach(function(el, i) {
+              el.style.opacity = (!elements.length || elements[0].index === i) ? '1' : '0.35';
+            });
+            var centerLabel = document.getElementById('pieCenterLabel');
+            var centerValue = document.getElementById('pieCenterValue');
+            var activeItems = (charts['pieChart'] && charts['pieChart'].pieItems) || pieItems;
+            if (elements.length && activeItems[elements[0].index]) {
+              var idx = elements[0].index;
+              if (centerLabel) { centerLabel.textContent = activeItems[idx].name; }
+              if (centerValue) { centerValue.textContent = fmt(activeItems[idx].secs); }
+            } else {
+              if (centerLabel) { centerLabel.textContent = 'Projects'; }
+              if (centerValue) { centerValue.textContent = fmt(lifetimeSecs || (data && data.lifetimeSecs)); }
+            }
+          }
+        },
+        plugins: []
+      });
+      if (charts['pieChart']) {
+        charts['pieChart'].pieItems = pieItems;
+      }
+    }
+
+    // Build custom legend
+    var pieLegend = document.getElementById('pieLegend');
+    if (pieLegend) {
+      pieLegend.innerHTML = pieItems.map(function(x, i) {
+        return '<div class="pie-legend-item" data-idx="' + i + '" style="display:flex;align-items:center;gap:10px;padding:6px 6px;border-radius:6px;cursor:pointer;transition:all 0.15s;">'
+          + '<span style="width:10px;height:10px;border-radius:50%;background:' + x.color + ';flex-shrink:0;"></span>'
+          + '<span style="font-size:12px;font-weight:500;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;" title="' + x.name + '">' + x.name + '</span>'
+          + '<span style="font-size:12px;font-weight:600;color:' + x.color + ';margin-left:auto;padding-left:8px;font-variant-numeric:tabular-nums;">' + fmt(x.secs) + '</span>'
+          + '</div>';
+      }).join('');
+
+      pieLegend.querySelectorAll('.pie-legend-item').forEach(function(el) {
+        el.addEventListener('mouseenter', function() {
+          var idx = +el.dataset.idx;
+          var chart = charts['pieChart'];
+          if (!chart) { return; }
+          var activeItems = chart.pieItems || pieItems;
+          chart.setDatasetVisibility(0, true);
+          var meta = chart.getDatasetMeta(0);
+          meta.data.forEach(function(arc, i) {
+            arc.options.backgroundColor = i === idx ? (activeItems[i] ? activeItems[i].color : C[i]) : (activeItems[i] ? activeItems[i].color + '44' : C[i] + '44');
+          });
+          chart.update('none');
+          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l, i) {
+            l.style.opacity = i === idx ? '1' : '0.35';
+          });
+          var centerLabel = document.getElementById('pieCenterLabel');
+          var centerValue = document.getElementById('pieCenterValue');
+          if (centerLabel && activeItems[idx]) { centerLabel.textContent = activeItems[idx].name; }
+          if (centerValue && activeItems[idx]) { centerValue.textContent = fmt(activeItems[idx].secs); }
+        });
+        el.addEventListener('mouseleave', function() {
+          var chart = charts['pieChart'];
+          if (!chart) { return; }
+          var activeItems = chart.pieItems || pieItems;
+          var meta = chart.getDatasetMeta(0);
+          meta.data.forEach(function(arc, i) {
+            arc.options.backgroundColor = activeItems[i] ? activeItems[i].color : C[i];
+          });
+          chart.update('none');
+          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l) { l.style.opacity = '1'; });
+          var centerLabel = document.getElementById('pieCenterLabel');
+          var centerValue = document.getElementById('pieCenterValue');
+          if (centerLabel) { centerLabel.textContent = 'Projects'; }
+          if (centerValue) { centerValue.textContent = fmt(lifetimeSecs || (data && data.lifetimeSecs)); }
+        });
+      });
+    }
+
+    var centerLabel = document.getElementById('pieCenterLabel');
+    var centerValue = document.getElementById('pieCenterValue');
+    if (centerLabel) { centerLabel.textContent = 'Projects'; }
+    if (centerValue) { centerValue.textContent = fmt(lifetimeSecs || (data && data.lifetimeSecs)); }
+  }
+
+  function draw30DayHeatmap(l30dates) {
+    const grid = document.getElementById('bklitHeatmapGrid');
+    const statsEl = document.getElementById('heatmapStats');
+    if (!grid) { return; }
+    if (!l30dates || !l30dates.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-muted);">No 30-day data recorded yet</div>';
+      return;
+    }
+
+    const last30 = data.last30 || {};
+    let totalSecs = 0;
+    let activeDays = 0;
+
+    let html = '';
+    l30dates.forEach(function(dateStr) {
+      const secs = last30[dateStr] || 0;
+      totalSecs += secs;
+      if (secs > 0) { activeDays++; }
+      const h = hrs(secs);
+
+      let lvl = 0;
+      if (secs > 0 && secs < 2 * 3600) { lvl = 1; }
+      else if (secs >= 2 * 3600 && secs < 5 * 3600) { lvl = 2; }
+      else if (secs >= 5 * 3600 && secs < 8 * 3600) { lvl = 3; }
+      else if (secs >= 8 * 3600) { lvl = 4; }
+
+      const dateLabel = dateStr.slice(5); // "MM-DD"
+      const timeStr = secs > 0 ? fmt(secs) : '0m';
+
+      html += '<div class="bklit-heat-tile lvl-' + lvl + '" title="' + dateStr + ': ' + timeStr + '">'
+        + '<span class="heat-date">' + dateLabel + '</span>'
+        + '<div class="heat-intensity-pill"></div>'
+        + '<span class="heat-hours">' + (secs > 0 ? fmt(secs) : '·') + '</span>'
+        + '</div>';
+    });
+
+    grid.innerHTML = html;
+    if (statsEl) {
+      statsEl.textContent = activeDays + ' of 30 days active (' + fmt(totalSecs) + ' total)';
+    }
+  }
+
+  // 6. Last 6 Months Momentum - Vertical Bar Chart
+  function drawMonthChart() {
+    const months = Object.keys(data.last6months || {});
+    const monthCanvas = document.getElementById('monthChart');
+    if (!monthCanvas || !months.length) { return; }
+
+    const monthSecs = months.map(function(m) { return (data.last6months && data.last6months[m]) || 0; });
+    const monthHours = monthSecs.map(function(s) { return hrs(s); });
+
+    const monthLabels = months.map(function(m) {
+      const parts = m.split('-');
+      return new Date(+parts[0], +parts[1] - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+    });
+
+    let barBg = '#61afef';
+    const ctx = monthCanvas.getContext('2d');
+    if (ctx) {
+      const grad = ctx.createLinearGradient(0, 0, 0, 220);
+      grad.addColorStop(0, '#61afef');
+      grad.addColorStop(1, 'rgba(97, 175, 239, 0.22)');
+      barBg = grad;
+    }
+
+    makeChart('monthChart', {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [{
+          label: 'Monthly Volume',
+          data: monthHours,
+          backgroundColor: barBg,
+          hoverBackgroundColor: '#82c2f5',
+          borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 2, bottomRight: 2 },
+          borderSkipped: false,
+          maxBarThickness: 38,
+          barPercentage: 0.68,
+          categoryPercentage: 0.8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18181c',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              title: function(ctx) {
+                if (!ctx || !ctx.length) { return ''; }
+                const mKey = months[ctx[0].dataIndex];
+                const parts = mKey.split('-');
+                return new Date(+parts[0], +parts[1] - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+              },
+              label: function(ctx) {
+                const idx = ctx.dataIndex;
+                const secs = monthSecs[idx];
+                return ' Volume: ' + fmt(secs);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: TICK, font: { size: 11, weight: '500' } },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            grace: '10%',
+            ticks: {
+              color: TICK,
+              callback: function(v) { return v + 'h'; }
+            },
+            grid: { color: GRID, drawTicks: false },
+            border: { display: false, dash: [4, 4] }
+          }
+        }
+      }
+    });
+  }
+
+  let selectedL7Project = 'all';
+
+  function drawL7Section(effectiveFolderRows, effectiveL7stacked, effectiveL7projects) {
+    const l7dates = data.last7dates || [];
+    const filterContainer = document.getElementById('l7ProjectFilters');
+
+    // Calculate totals for each project across the last 7 days
+    const activeProjects = (effectiveL7projects || []).map(function(proj) {
+      const matchRow = (effectiveFolderRows || []).find(function(fr) { return fr.name === proj; });
+      const color = (matchRow && matchRow.color) || '#61afef';
+      const totalSecs = l7dates.reduce(function(sum, d) {
+        return sum + (((effectiveL7stacked[proj] || {})[d]) || 0);
+      }, 0);
+      return { name: proj, color: color, totalSecs: totalSecs };
+    }).filter(function(p) { return p.totalSecs > 0; });
+
+    // Sort by focus time in last 7 days descending
+    activeProjects.sort(function(a, b) { return b.totalSecs - a.totalSecs; });
+
+    // Take top 4 projects for pill buttons
+    const topPills = activeProjects.slice(0, 4);
+
+    // If currently selected project is no longer active, reset to 'all'
+    if (selectedL7Project !== 'all' && !activeProjects.some(function(p) { return p.name === selectedL7Project; })) {
+      selectedL7Project = 'all';
+    }
+
+    if (filterContainer) {
+      let pillsHtml = '<button class="bklit-pill' + (selectedL7Project === 'all' ? ' active' : '') + '" data-proj="all">'
+        + '<span class="bklit-pill-dot" style="background:#61afef;"></span>'
+        + '<span>All</span>'
+        + '</button>';
+
+      topPills.forEach(function(p) {
+        const isActive = selectedL7Project === p.name;
+        pillsHtml += '<button class="bklit-pill' + (isActive ? ' active' : '') + '" data-proj="' + p.name + '" title="' + p.name + ' (' + fmt(p.totalSecs) + ')">'
+          + '<span class="bklit-pill-dot" style="background:' + p.color + ';"></span>'
+          + '<span>' + p.name + '</span>'
+          + '</button>';
+      });
+
+      filterContainer.innerHTML = pillsHtml;
+
+      filterContainer.querySelectorAll('.bklit-pill').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const targetProj = btn.getAttribute('data-proj');
+          if (selectedL7Project === targetProj) { return; }
+          selectedL7Project = targetProj;
+          filterContainer.querySelectorAll('.bklit-pill').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-proj') === targetProj);
+          });
+          renderL7Chart(effectiveFolderRows, effectiveL7stacked, effectiveL7projects);
+        });
+      });
+    }
+
+    renderL7Chart(effectiveFolderRows, effectiveL7stacked, effectiveL7projects);
+  }
+
+  function renderL7Chart(effectiveFolderRows, effectiveL7stacked, effectiveL7projects) {
+    const l7dates = data.last7dates || [];
+    const l7labels = l7dates.map(function(d) {
+      const parts = d.split('-');
+      const dt = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+      return dt.toLocaleDateString('default', { weekday: 'short' }) + ' ' + (+parts[1]) + '/' + (+parts[2]);
+    });
+
+    const canvas = document.getElementById('lineChart');
+    if (!canvas) { return; }
+
+    let lineColor = '#61afef';
+    let chartValues = [];
+    let datasetLabel = 'All Projects';
+
+    if (selectedL7Project === 'all') {
+      lineColor = '#61afef';
+      datasetLabel = 'All Projects';
+      chartValues = l7dates.map(function(d) {
+        let daySecs = 0;
+        (effectiveL7projects || []).forEach(function(proj) {
+          daySecs += ((effectiveL7stacked[proj] || {})[d]) || 0;
+        });
+        return hrs(daySecs);
+      });
+    } else {
+      const matchRow = (effectiveFolderRows || []).find(function(fr) { return fr.name === selectedL7Project; });
+      lineColor = (matchRow && matchRow.color) || '#61afef';
+      datasetLabel = selectedL7Project;
+      chartValues = l7dates.map(function(d) {
+        return hrs(((effectiveL7stacked[selectedL7Project] || {})[d]) || 0);
+      });
+    }
+
+    const ctx = canvas.getContext('2d');
+    let areaGrad = hexToRgba(lineColor, 0.16);
+    if (ctx) {
+      const grad = ctx.createLinearGradient(0, 0, 0, 220);
+      grad.addColorStop(0, hexToRgba(lineColor, 0.4));
+      grad.addColorStop(0.65, hexToRgba(lineColor, 0.08));
+      grad.addColorStop(1, hexToRgba(lineColor, 0.0));
+      areaGrad = grad;
+    }
+
+    makeChart('lineChart', {
+      type: 'line',
+      data: {
+        labels: l7labels,
+        datasets: [{
+          label: datasetLabel,
+          data: chartValues,
+          borderColor: lineColor,
+          borderWidth: 2.5,
+          backgroundColor: areaGrad,
+          fill: true,
+          tension: 0.38,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: lineColor,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
+          pointHoverBackgroundColor: '#ffffff',
+          pointHoverBorderColor: lineColor,
+          pointHoverBorderWidth: 2.5
+        }]
+      },
+      plugins: [],
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        layout: { padding: { top: 8, bottom: 2, left: 2, right: 6 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18181c',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              title: function(ctx) {
+                if (!ctx || !ctx.length) { return ''; }
+                const rawDate = l7dates[ctx[0].dataIndex];
+                if (!rawDate) { return ctx[0].label; }
+                const parts = rawDate.split('-');
+                const dt = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+                return dt.toLocaleDateString('default', { weekday: 'long', month: 'short', day: 'numeric' });
+              },
+              label: function(ctx) {
+                const dateKey = l7dates[ctx.dataIndex];
+                if (selectedL7Project === 'all') {
+                  let totalSecs = 0;
+                  (effectiveL7projects || []).forEach(function(proj) {
+                    totalSecs += ((effectiveL7stacked[proj] || {})[dateKey]) || 0;
+                  });
+                  return ' Total Coding: ' + fmt(totalSecs);
+                } else {
+                  const secs = ((effectiveL7stacked[selectedL7Project] || {})[dateKey]) || 0;
+                  return ' ' + selectedL7Project + ': ' + fmt(secs);
+                }
+              },
+              afterBody: function(ctx) {
+                if (!ctx || !ctx.length) { return []; }
+                const dateKey = l7dates[ctx[0].dataIndex];
+                if (selectedL7Project === 'all') {
+                  const dayBreakdown = (effectiveL7projects || [])
+                    .map(function(proj) {
+                      const secs = ((effectiveL7stacked[proj] || {})[dateKey]) || 0;
+                      return { name: proj, secs: secs };
+                    })
+                    .filter(function(p) { return p.secs > 0; })
+                    .sort(function(a, b) { return b.secs - a.secs; });
+
+                  if (dayBreakdown.length > 1) {
+                    return dayBreakdown.slice(0, 4).map(function(p) {
+                      return '  • ' + p.name + ': ' + fmt(p.secs);
+                    });
+                  }
+                } else {
+                  let dayTotalSecs = 0;
+                  (effectiveL7projects || []).forEach(function(proj) {
+                    dayTotalSecs += ((effectiveL7stacked[proj] || {})[dateKey]) || 0;
+                  });
+                  const pSecs = ((effectiveL7stacked[selectedL7Project] || {})[dateKey]) || 0;
+                  if (dayTotalSecs > 0 && pSecs > 0) {
+                    const pct = Math.round((pSecs / dayTotalSecs) * 100);
+                    return ['  Day Total: ' + fmt(dayTotalSecs) + ' (' + pct + '% of day)'];
+                  }
+                }
+                return [];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: TICK, font: { size: 10, weight: '500' }, maxRotation: 0 },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            grace: '14%',
+            ticks: {
+              color: TICK,
+              callback: function(v) { return v + 'h'; }
+            },
+            grid: { color: GRID, drawTicks: false },
+            border: { display: false, dash: [4, 4] }
+          }
+        }
+      }
+    });
+  }
+
   function drawCharts() {
     if (!data) { return; }
     const effectiveFolderRows = (groupMode && data.groupedFolderRows) ? data.groupedFolderRows : (data.folderRows || []);
@@ -189,237 +874,178 @@
     const effectiveTop6projects = (groupMode && data.groupedTop6projects) ? data.groupedTop6projects : (data.top6projects || []);
     const effectiveL30stacked = (groupMode && data.groupedLast30stacked) ? data.groupedLast30stacked : (data.last30stacked || {});
 
-    // 1. Top 10 lifetime bar
-    const top10 = [...effectiveFolderRows].slice(0, 10);
-    makeChart('barChart', {
+    // 1. Top 5 lifetime horizontal ranked leaderboard
+    const top5 = [...effectiveFolderRows].slice(0, 5);
+    drawLeaderboard(top5, data.lifetimeSecs, effectiveFolderRows);
+
+    // 2. Donut share (top 5 + others)
+    drawPieChart(effectiveDirTotals, effectiveFolderRows, data.lifetimeSecs);
+
+    // 3. Last 7 Days - Bklit Interactive Glowing Area Chart with Project Filter Pills
+    drawL7Section(effectiveFolderRows, effectiveL7stacked, effectiveL7projects);
+
+    // 4. Top Projects This Week - Bklit Horizontal Bar Chart
+    const activeW5 = (effectiveW5 || []).filter(function(r) { return (r.weekSecs || 0) > 0; }).slice(0, 5);
+    const weekItems = activeW5.length ? activeW5 : (effectiveFolderRows || []).slice(0, 5);
+    const weekLabels = weekItems.map(function(r) { return r.name; });
+    const weekVals = weekItems.map(function(r) { return hrs(r.weekSecs || 0); });
+    const weekColors = weekItems.map(function(r, idx) { return r.color || C[idx % C.length]; });
+    const totalWeekSecs = data.weekTotal || 1;
+
+    makeChart('weekdayChart', {
       type: 'bar',
       data: {
-        labels: top10.map(function(r) { return r.name; }),
-        datasets: [{ data: top10.map(function(r) { return hrs(r.totalSecs); }), backgroundColor: C[0], borderRadius: 4 }]
-      },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: scaleOpts('h') }
-    });
-
-    // 2. Donut share
-    const pie8 = Object.entries(effectiveDirTotals || {}).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
-    var pieColors = C.slice(0, pie8.length);
-    makeChart('pieChart', {
-      type: 'doughnut',
-      data: {
-        labels: pie8.map(function(x) { return x[0]; }),
+        labels: weekLabels,
         datasets: [{
-          data: pie8.map(function(x) { return hrs(x[1]); }),
-          backgroundColor: pieColors,
-          hoverBackgroundColor: pieColors,
-          borderWidth: 2,
-          borderColor: '#0e0e10',
-          hoverOffset: 6
+          data: weekVals,
+          backgroundColor: weekColors,
+          hoverBackgroundColor: weekColors,
+          borderRadius: { topRight: 6, bottomRight: 6, topLeft: 2, bottomLeft: 2 },
+          borderSkipped: false,
+          maxBarThickness: 26,
+          barPercentage: 0.78,
+          categoryPercentage: 0.88
         }]
       },
-      options: {
-        responsive: true,
-        cutout: '62%',
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
-        },
-        onHover: function(evt, elements) {
-          var canvas = document.getElementById('pieChart');
-          if (canvas) { canvas.style.cursor = elements.length ? 'pointer' : 'default'; }
-          var legendItems = document.querySelectorAll('.pie-legend-item');
-          legendItems.forEach(function(el, i) {
-            el.style.opacity = (!elements.length || elements[0].index === i) ? '1' : '0.35';
-          });
-          var centerLabel = document.getElementById('pieCenterLabel');
-          var centerValue = document.getElementById('pieCenterValue');
-          if (elements.length && pie8[elements[0].index]) {
-            var idx = elements[0].index;
-            if (centerLabel) { centerLabel.textContent = pie8[idx][0]; }
-            if (centerValue) { centerValue.textContent = fmt(pie8[idx][1]); }
-          } else {
-            if (centerLabel) { centerLabel.textContent = 'Projects'; }
-            if (centerValue) { centerValue.textContent = fmt(data.lifetimeSecs); }
-          }
-        }
-      },
-      plugins: []
-    });
-    // build custom legend
-    var pieLegend = document.getElementById('pieLegend');
-    if (pieLegend) {
-      pieLegend.innerHTML = pie8.map(function(x, i) {
-        return '<div class="pie-legend-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;transition:opacity 0.15s;">'
-          + '<span style="width:10px;height:10px;border-radius:50%;background:'+C[i]+';flex-shrink:0;"></span>'
-          + '<span style="font-size:11px;font-weight:500;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;" title="'+x[0]+'">'+x[0]+'</span>'
-          + '<span style="font-size:11px;font-weight:600;color:'+C[i]+';margin-left:auto;padding-left:8px;font-variant-numeric:tabular-nums;">'+fmt(x[1])+'</span>'
-          + '</div>';
-      }).join('');
-      pieLegend.querySelectorAll('.pie-legend-item').forEach(function(el) {
-        el.addEventListener('mouseenter', function() {
-          var idx = +el.dataset.idx;
-          var chart = charts['pieChart'];
-          if (!chart) { return; }
-          chart.setDatasetVisibility(0, true);
-          var meta = chart.getDatasetMeta(0);
-          meta.data.forEach(function(arc, i) { arc.options.backgroundColor = i === idx ? C[i] : C[i] + '44'; });
-          chart.update('none');
-          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l, i) {
-            l.style.opacity = i === idx ? '1' : '0.35';
-          });
-          var centerLabel = document.getElementById('pieCenterLabel');
-          var centerValue = document.getElementById('pieCenterValue');
-          if (centerLabel && pie8[idx]) { centerLabel.textContent = pie8[idx][0]; }
-          if (centerValue && pie8[idx]) { centerValue.textContent = fmt(pie8[idx][1]); }
-        });
-        el.addEventListener('mouseleave', function() {
-          var chart = charts['pieChart'];
-          if (!chart) { return; }
-          var meta = chart.getDatasetMeta(0);
-          meta.data.forEach(function(arc, i) { arc.options.backgroundColor = C[i]; });
-          chart.update('none');
-          pieLegend.querySelectorAll('.pie-legend-item').forEach(function(l) { l.style.opacity = '1'; });
-          var centerLabel = document.getElementById('pieCenterLabel');
-          var centerValue = document.getElementById('pieCenterValue');
-          if (centerLabel) { centerLabel.textContent = 'Projects'; }
-          if (centerValue) { centerValue.textContent = fmt(data.lifetimeSecs); }
-        });
-      });
-    }
-
-    // Set initial doughnut center values on load
-    var initCenterLabel = document.getElementById('pieCenterLabel');
-    var initCenterValue = document.getElementById('pieCenterValue');
-    if (initCenterLabel) { initCenterLabel.textContent = 'Projects'; }
-    if (initCenterValue) { initCenterValue.textContent = fmt(data.lifetimeSecs); }
-
-    // 3. Last 7 days stacked area by project
-    const l7dates = data.last7dates || [];
-    const l7datasets = (effectiveL7projects || [])
-      .map(function(proj, i) {
-        return {
-          label: proj,
-          data: l7dates.map(function(d) { return hrs(((effectiveL7stacked[proj] || {})[d]) || 0); }),
-          backgroundColor: STACK[i % STACK.length] + 'cc',
-          borderColor: STACK[i % STACK.length],
-          borderWidth: 1.5,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
-          pointBackgroundColor: STACK[i % STACK.length]
-        };
-      })
-      .filter(function(ds) { return ds.data.some(function(v) { return v > 0; }); });
-    makeChart('lineChart', {
-      type: 'line',
-      data: { labels: l7dates, datasets: l7datasets },
-      options: {
-        responsive: true,
-        interaction: { mode: 'index', intersect: false, axis: 'x' },
-        plugins: {
-          legend: {
-            position: 'top',
-            align: 'end',
-            labels: {
-              color: TICK,
-              usePointStyle: true,
-              pointStyle: 'circle',
-              boxWidth: 6,
-              boxHeight: 6,
-              padding: 10,
-              font: { size: 10 }
-            }
-          },
-          tooltip: {
-            filter: function(item) { return item.parsed.y > 0; },
-            callbacks: {
-              title: function(ctx) {
-                if (!ctx || !ctx.length) { return ''; }
-                return ctx[0].label;
-              },
-              beforeBody: function(ctx) {
-                if (!ctx || !ctx.length) { return 'No data'; }
-                const total = ctx.reduce(function(s, c) { return s + c.parsed.y; }, 0);
-                return 'Total: ' + fmt(Math.round(total * 3600));
-              },
-              label: function(ctx) { return ' ' + ctx.dataset.label + ':  ' + fmt(Math.round(ctx.parsed.y * 3600)); }
-            }
-          }
-        },
-        scales: {
-          x: { stacked: true, ticks: { color: TICK, font: { size: 10 } }, grid: { color: GRID } },
-          y: { stacked: true, beginAtZero: true, ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } }
-        }
-      }
-    });
-
-    // 4. Top 5 this week horizontal bar
-    const w5 = effectiveW5 || [];
-    makeChart('weekBarChart', {
-      type: 'bar',
-      data: {
-        labels: w5.map(function(r) { return r.name; }),
-        datasets: [{ data: w5.map(function(r) { return hrs(r.weekSecs); }), backgroundColor: C[1], borderRadius: 4 }]
-      },
+      plugins: [bklitHorizontalBarGhostPlugin],
       options: {
         indexAxis: 'y',
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18181c',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: function(ctx) {
+                const idx = ctx.dataIndex;
+                const r = weekItems[idx];
+                const secs = r ? (r.weekSecs || 0) : Math.round(ctx.parsed.x * 3600);
+                const pct = totalWeekSecs > 0 ? Math.round((secs / totalWeekSecs) * 100) : 0;
+                return ' ' + ctx.label + ': ' + fmt(secs) + ' (' + pct + '% of this week)';
+              }
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: TICK, callback: function(v) { return v + 'h'; } }, grid: { color: GRID } },
-          y: { ticks: { color: TICK }, grid: { color: GRID } }
+          y: {
+            ticks: {
+              color: '#e6f1ff',
+              font: { size: 11, weight: '500' }
+            },
+            grid: { display: false },
+            border: { display: false }
+          },
+          x: {
+            beginAtZero: true,
+            ticks: {
+              color: TICK,
+              callback: function(v) { return v + 'h'; }
+            },
+            grid: { color: GRID, drawTicks: false },
+            border: { display: false, dash: [4, 4] }
+          }
         }
       }
     });
 
-    // 5. Last 30 days stacked by project
+    // 5. Last 30 Days - Daily Activity Volume & 7-Day Momentum Trendline
     const l30dates = Object.keys(data.last30 || {});
+    const dailyHours = l30dates.map(function(d) { return hrs(data.last30[d]); });
+
+    // 7-day rolling moving average for momentum
+    const movingAvg7d = dailyHours.map(function(_, idx) {
+      const window = dailyHours.slice(Math.max(0, idx - 6), idx + 1);
+      const sum = window.reduce(function(a, b) { return a + b; }, 0);
+      return +(sum / window.length).toFixed(1);
+    });
+
+    const l30Canvas = document.getElementById('heatmapChart');
+    let l30BarBg = '#56b6c2';
+    if (l30Canvas) {
+      const ctx = l30Canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 220);
+      grad.addColorStop(0, '#56b6c2');
+      grad.addColorStop(1, 'rgba(86, 182, 194, 0.16)');
+      l30BarBg = grad;
+    }
+
     makeChart('heatmapChart', {
       type: 'bar',
       data: {
         labels: l30dates.map(function(d) { return d.slice(5); }),
-        datasets: (effectiveTop6projects || []).map(function(proj, i) {
-          return {
-            label: proj,
-            data: l30dates.map(function(d) { return hrs(((effectiveL30stacked[proj] || {})[d]) || 0); }),
-            backgroundColor: STACK[i % STACK.length],
-            borderRadius: 2,
+        datasets: [
+          {
+            type: 'line',
+            label: '7-Day Momentum Trend',
+            data: movingAvg7d,
+            borderColor: '#e5c07b',
+            borderWidth: 2.2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#e5c07b',
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 2,
+            tension: 0.38,
+            fill: false,
+            order: 1
+          },
+          {
+            type: 'bar',
+            label: 'Daily Active',
+            data: dailyHours,
+            backgroundColor: l30BarBg,
+            hoverBackgroundColor: '#6fe1ed',
+            borderRadius: 4,
             borderSkipped: false,
-            barPercentage: 0.85,
-            categoryPercentage: 0.9
-          };
-        })
+            maxBarThickness: 12,
+            order: 2
+          }
+        ]
       },
+      plugins: [],
       options: {
         responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        layout: { padding: { top: 6, bottom: 2, left: 2, right: 6 } },
         plugins: {
           legend: {
             position: 'top',
             align: 'end',
             labels: {
-              color: TICK,
+              color: '#9ba1b0',
               usePointStyle: true,
               pointStyle: 'circle',
               boxWidth: 6,
               boxHeight: 6,
-              padding: 10,
-              font: { size: 10 }
+              padding: 12,
+              font: { size: 10, weight: '500' }
             }
           },
           tooltip: {
+            backgroundColor: '#18181c',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
             callbacks: {
               title: function(ctx) { return l30dates[ctx[0].dataIndex]; },
               beforeBody: function(ctx) {
                 const date = l30dates[ctx[0].dataIndex];
-                const total = (data.top6projects || []).reduce(function(s, p) { return s + (((data.last30stacked[p] || {})[date]) || 0); }, 0);
+                const total = (data.last30 && data.last30[date]) || 0;
                 return 'Total: ' + fmt(total);
               },
-              label: function(ctx) { return ' ' + ctx.dataset.label + ':  ' + fmt(Math.round(ctx.parsed.y * 3600)); }
+              label: function(ctx) {
+                if (ctx.dataset.type === 'line') {
+                  return ' 7-Day Pace: ' + fmtHours(ctx.parsed.y) + '/day';
+                }
+                return ' Active: ' + fmtHours(ctx.parsed.y);
+              }
             }
           }
         },
         scales: {
           x: {
-            stacked: true,
             ticks: {
               color: TICK,
               maxRotation: 0,
@@ -431,8 +1057,8 @@
             border: { display: false }
           },
           y: {
-            stacked: true,
             beginAtZero: true,
+            grace: '15%',
             ticks: { color: TICK, callback: function(v) { return v + 'h'; } },
             grid: { color: GRID, drawTicks: false },
             border: { display: false, dash: [4, 4] }
@@ -441,23 +1067,11 @@
       }
     });
 
-    // 6. Last 6 months
-    const months = Object.keys(data.last6months || {});
-    makeChart('monthChart', {
-      type: 'bar',
-      data: {
-        labels: months.map(function(m) {
-          const parts = m.split('-');
-          return new Date(+parts[0], +parts[1] - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
-        }),
-        datasets: [{
-          data: months.map(function(m) { return hrs(data.last6months[m]); }),
-          backgroundColor: months.map(function(_, i) { return i === months.length - 1 ? C[2] : C[0]; }),
-          borderRadius: 4
-        }]
-      },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: scaleOpts('h') }
-    });
+    // 6. Last 6 Months Momentum - Bklit Column Bar / Area Chart
+    drawMonthChart();
+
+    // Render Bklit 30-Day Activity Heatmap Matrix
+    draw30DayHeatmap(l30dates);
 
     // 7. Hour of day - percentage of hour used (last 30 days)
     const hourLabels = Array.from({ length: 24 }, function(_, i) {
@@ -533,30 +1147,144 @@
   let sortCol = 'totalSecs', sortAsc = false, filterText = '', showAll = false;
   let expandedGroups = new Set();
   let selectedFolders = new Set();
-  let modalFolderSearchText = '';
+  // --- Trends Toggle: 30-Day Volume Bars vs Heatmap Grid ---
+  const l30BarsBtn = document.getElementById('l30BarsBtn');
+  const l30HeatmapBtn = document.getElementById('l30HeatmapBtn');
+  const l30ChartWrap = document.getElementById('l30ChartWrap');
+  const l30HeatmapWrap = document.getElementById('l30HeatmapWrap');
 
-  function renderTable() {
-    let sourceRows = (groupMode && data.groupedFolderRows) ? data.groupedFolderRows : (data.folderRows || []);
-    let rows = [...sourceRows];
-    if (filterText) {
-      rows = rows.filter(function(r) {
-        if (r.name.toLowerCase().includes(filterText)) { return true; }
-        if (r.subProjects && r.subProjects.some(function(sp) { return sp.name.toLowerCase().includes(filterText); })) {
-          return true;
-        }
-        return false;
-      });
-    }
-    rows.sort(function(a, b) {
-      const av = a[sortCol], bv = b[sortCol];
-      if (typeof av === 'string') { return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av); }
-      return sortAsc ? av - bv : bv - av;
+  if (l30BarsBtn && l30HeatmapBtn) {
+    l30BarsBtn.addEventListener('click', function() {
+      l30BarsBtn.classList.add('active');
+      l30HeatmapBtn.classList.remove('active');
+      if (l30ChartWrap) { l30ChartWrap.classList.remove('hidden'); }
+      if (l30HeatmapWrap) { l30HeatmapWrap.classList.add('hidden'); }
     });
-    const limited = (!showAll && !filterText) ? rows.slice(0, 10) : rows;
-    const toggleBtn = document.getElementById('toggleRows');
-    if (toggleBtn) {
-      toggleBtn.textContent = showAll ? 'Top 10' : ('Show All (' + rows.length + ')');
+    l30HeatmapBtn.addEventListener('click', function() {
+      l30HeatmapBtn.classList.add('active');
+      l30BarsBtn.classList.remove('active');
+      if (l30HeatmapWrap) { l30HeatmapWrap.classList.remove('hidden'); }
+      if (l30ChartWrap) { l30ChartWrap.classList.add('hidden'); }
+    });
+  }
+
+  // --- View Mode & Explorer (Cards vs Table) ---
+  let displayMode = 'cards';
+  const displayCardsBtn = document.getElementById('displayCardsBtn');
+  const displayTableBtn = document.getElementById('displayTableBtn');
+  const projectCardsGrid = document.getElementById('projectCardsGrid');
+  const projectDataTable = document.getElementById('projectDataTable');
+
+  function setDisplayMode(mode) {
+    displayMode = mode;
+    if (mode === 'cards') {
+      if (displayCardsBtn) displayCardsBtn.classList.add('active');
+      if (displayTableBtn) displayTableBtn.classList.remove('active');
+      if (projectCardsGrid) projectCardsGrid.classList.remove('hidden');
+      if (projectDataTable) projectDataTable.classList.add('hidden');
+    } else {
+      if (displayTableBtn) displayTableBtn.classList.add('active');
+      if (displayCardsBtn) displayCardsBtn.classList.remove('active');
+      if (projectDataTable) projectDataTable.classList.remove('hidden');
+      if (projectCardsGrid) projectCardsGrid.classList.add('hidden');
     }
+  }
+
+  if (displayCardsBtn) {
+    displayCardsBtn.addEventListener('click', function() {
+      setDisplayMode('cards');
+    });
+  }
+  if (displayTableBtn) {
+    displayTableBtn.addEventListener('click', function() {
+      setDisplayMode('table');
+    });
+  }
+
+  function renderProjectCards(rows, limited) {
+    const grid = document.getElementById('projectCardsGrid');
+    if (!grid) { return; }
+    if (!rows.length) {
+      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding: 48px 16px; color: var(--text-muted); font-size: 13px;">No projects found' + (filterText ? ' matching "' + filterText + '"' : '') + '</div>';
+      return;
+    }
+
+    const totalLifetime = data.lifetimeSecs || rows.reduce(function(s, r) { return s + (r.totalSecs || 0); }, 0) || 1;
+
+    let html = '';
+    limited.forEach(function(r) {
+      const isGroup = groupMode && r.isGroup;
+      const subCount = r.subProjects ? r.subProjects.length : 0;
+      const isExpanded = isGroup && expandedGroups.has(r.id);
+      const color = r.color || '#61afef';
+      const sharePctVal = totalLifetime > 0 ? (((r.totalSecs || 0) / totalLifetime) * 100) : 0;
+      const sharePct = sharePctVal.toFixed(1);
+      const pct = Math.max(2, Math.min(100, sharePctVal));
+      const lastActiveStr = r.lastActive ? new Date(r.lastActive).toLocaleDateString() : '--';
+
+      html += '<div class="project-card' + (isGroup ? ' is-group' : '') + '" style="--group-card-color:' + color + ';">'
+        + '<div class="project-card-top">'
+        + '  <div class="project-card-title-wrap">'
+        + '    <span class="project-card-dot" style="background:' + color + ';"></span>'
+        + '    <span class="project-card-title" title="' + r.name + '">' + r.name + '</span>'
+        + '  </div>'
+        + '  <div class="project-card-meta">'
+        + (isGroup ? ('    <span class="project-card-badge">' + subCount + ' folder' + (subCount === 1 ? '' : 's') + '</span>') : '')
+        + '    <span class="project-card-time">' + lastActiveStr + '</span>'
+        + '  </div>'
+        + '</div>'
+        + '<div class="project-card-metrics">'
+        + '  <div class="project-metric-col"><span class="m-label">Today</span><span class="m-val">' + fmt(r.todaySecs) + '</span></div>'
+        + '  <div class="project-metric-col"><span class="m-label">7 Days</span><span class="m-val">' + fmt(r.last7Secs) + '</span></div>'
+        + '  <div class="project-metric-col"><span class="m-label">30 Days</span><span class="m-val">' + fmt(r.rolling30Secs) + '</span></div>'
+        + '  <div class="project-metric-col"><span class="m-label">Lifetime</span><span class="m-val" style="color:' + color + ';">' + fmt(r.totalSecs) + '</span></div>'
+        + '</div>'
+        + '<div class="project-card-progress">'
+        + '  <div class="project-card-track">'
+        + '    <div class="project-card-bar" style="width:' + pct.toFixed(1) + '%; background:' + color + ';"></div>'
+        + '  </div>'
+        + '  <span class="project-card-pct">' + sharePct + '%</span>'
+        + '</div>';
+
+      if (isGroup && r.subProjects && r.subProjects.length > 0) {
+        html += '<button class="project-card-expand-btn" data-group-id="' + r.id + '">'
+          + (isExpanded ? L_ICONS.chevronDown : L_ICONS.chevronRight)
+          + ' <span>' + (isExpanded ? 'Hide' : 'Show') + ' ' + subCount + ' sub-folder' + (subCount === 1 ? '' : 's') + '</span>'
+          + '</button>';
+
+        if (isExpanded) {
+          html += '<div class="project-card-sublist">';
+          r.subProjects.forEach(function(sp) {
+            const spPct = r.totalSecs > 0 ? Math.round((sp.totalSecs / r.totalSecs) * 100) : 0;
+            html += '<div class="subproject-card-row">'
+              + '  <span class="subproject-card-name" title="' + sp.name + '">' + sp.name + '</span>'
+              + '  <span class="subproject-card-time">' + fmt(sp.totalSecs) + ' (' + spPct + '%)</span>'
+              + '</div>';
+          });
+          html += '</div>';
+        }
+      }
+
+      html += '</div>';
+    });
+
+    grid.innerHTML = html;
+
+    grid.querySelectorAll('.project-card-expand-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const gid = btn.getAttribute('data-group-id');
+        if (expandedGroups.has(gid)) {
+          expandedGroups.delete(gid);
+        } else {
+          expandedGroups.add(gid);
+        }
+        renderExplorer();
+      });
+    });
+  }
+
+  function renderTable(rows, limited) {
     const tableBody = document.getElementById('tableBody');
     if (!tableBody) { return; }
     if (!rows.length) {
@@ -624,9 +1352,36 @@
         } else {
           expandedGroups.add(gid);
         }
-        renderTable();
+        renderExplorer();
       });
     });
+  }
+
+  function renderExplorer() {
+    let sourceRows = (groupMode && data.groupedFolderRows) ? data.groupedFolderRows : (data.folderRows || []);
+    let rows = [...sourceRows];
+    if (filterText) {
+      rows = rows.filter(function(r) {
+        if (r.name.toLowerCase().includes(filterText)) { return true; }
+        if (r.subProjects && r.subProjects.some(function(sp) { return sp.name.toLowerCase().includes(filterText); })) {
+          return true;
+        }
+        return false;
+      });
+    }
+    rows.sort(function(a, b) {
+      const av = a[sortCol], bv = b[sortCol];
+      if (typeof av === 'string') { return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av); }
+      return sortAsc ? av - bv : bv - av;
+    });
+    const limited = (!showAll && !filterText) ? rows.slice(0, 10) : rows;
+    const toggleBtn = document.getElementById('toggleRows');
+    if (toggleBtn) {
+      toggleBtn.textContent = showAll ? 'Top 10' : ('Show All (' + rows.length + ')');
+    }
+
+    renderProjectCards(rows, limited);
+    renderTable(rows, limited);
   }
 
   // --- Smart Suggestion Banner ---
@@ -1231,7 +1986,7 @@
       editingGroupId = null;
       updateCreateGroupBtnState();
       switchModalTab('activeGroups');
-      renderTable();
+      renderExplorer();
       drawCharts();
     });
   }
@@ -1256,7 +2011,7 @@
       if (deleteConfirmModal) { deleteConfirmModal.classList.add('hidden'); }
       renderModalExistingGroups();
       renderModalFolderList();
-      renderTable();
+      renderExplorer();
       drawCharts();
     });
   }
@@ -1280,7 +2035,7 @@
       groupMode = true;
       viewGroupedBtn.classList.add('active');
       viewIndividualBtn.classList.remove('active');
-      renderTable();
+      renderExplorer();
       drawCharts();
     });
     viewIndividualBtn.addEventListener('click', function() {
@@ -1288,13 +2043,13 @@
       groupMode = false;
       viewIndividualBtn.classList.add('active');
       viewGroupedBtn.classList.remove('active');
-      renderTable();
+      renderExplorer();
       drawCharts();
     });
   }
 
   // --- Release Announcement Banner & Feature Spotlight ---
-  const CURRENT_RELEASE_ID = 'v1.0.38';
+  const CURRENT_RELEASE_ID = 'v1.1.0';
   const releaseBanner = document.getElementById('releaseBanner');
   const releaseSpotlightBtn = document.getElementById('releaseSpotlightBtn');
   const dismissReleaseBannerBtn = document.getElementById('dismissReleaseBannerBtn');
@@ -1389,7 +2144,7 @@
 
   updateCards();
   drawCharts();
-  renderTable();
+  renderExplorer();
   updateSuggestionsBanner();
   initReleaseBanner();
 
@@ -1399,7 +2154,7 @@
       if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = false; }
       document.querySelectorAll('th').forEach(function(t) { t.classList.remove('sorted'); });
       th.classList.add('sorted');
-      renderTable();
+      renderExplorer();
     });
   });
 
@@ -1407,7 +2162,7 @@
   if (filterInput) {
     filterInput.addEventListener('input', function(e) {
       filterText = e.target.value.toLowerCase();
-      renderTable();
+      renderExplorer();
     });
   }
 
@@ -1415,7 +2170,7 @@
   if (toggleRowsBtn) {
     toggleRowsBtn.addEventListener('click', function() {
       showAll = !showAll;
-      renderTable();
+      renderExplorer();
     });
   }
 
@@ -1461,7 +2216,7 @@
     if (!e.data || e.data.command !== 'liveUpdate') { return; }
     data = e.data.data || {};
     updateCards();
-    renderTable();
+    renderExplorer();
     updateFeedbackBadge();
     updateSuggestionsBanner();
     if (groupsModal && !groupsModal.classList.contains('hidden')) {
@@ -1472,28 +2227,49 @@
     // update chart data in-place without full redraw (no animation)
     const effectiveFolderRows = (groupMode && data.groupedFolderRows) ? data.groupedFolderRows : (data.folderRows || []);
     const effectiveL7stacked = (groupMode && data.groupedLast7stacked) ? data.groupedLast7stacked : (data.last7stacked || {});
+    const effectiveTop6projects = (groupMode && data.groupedTop6projects) ? data.groupedTop6projects : (data.top6projects || []);
     const effectiveL30stacked = (groupMode && data.groupedLast30stacked) ? data.groupedLast30stacked : (data.last30stacked || {});
 
-    if (charts['barChart']) {
-      var top10 = [...effectiveFolderRows].slice(0, 10);
-      charts['barChart'].data.labels = top10.map(function(r) { return r.name; });
-      charts['barChart'].data.datasets[0].data = top10.map(function(r) { return hrs(r.totalSecs); });
-      charts['barChart'].update('none');
+    // Update horizontal leaderboard (top 5) and donut share
+    const top5 = [...effectiveFolderRows].slice(0, 5);
+    drawLeaderboard(top5, data.lifetimeSecs, effectiveFolderRows);
+    const effectiveDirTotals = (groupMode && data.groupedDirTotals) ? data.groupedDirTotals : (data.dirTotals || {});
+    drawPieChart(effectiveDirTotals, effectiveFolderRows, data.lifetimeSecs);
+
+    if (data.last7dates) {
+      drawL7Section(effectiveFolderRows, effectiveL7stacked, effectiveL7projects);
     }
-    if (charts['lineChart'] && data.last7dates) {
-      charts['lineChart'].data.datasets.forEach(function(ds) {
-        var proj = ds.label;
-        ds.data = data.last7dates.map(function(d) { return hrs(((effectiveL7stacked[proj] || {})[d]) || 0); });
-      });
-      charts['lineChart'].update('none');
+    if (charts['weekdayChart']) {
+      const effectiveW5 = (groupMode && data.groupedWeekTop5) ? data.groupedWeekTop5 : (data.weekTop5 || []);
+      const activeW5 = (effectiveW5 || []).filter(function(r) { return (r.weekSecs || 0) > 0; }).slice(0, 5);
+      const weekItems = activeW5.length ? activeW5 : (effectiveFolderRows || []).slice(0, 5);
+      const weekColors = weekItems.map(function(r, idx) { return r.color || C[idx % C.length]; });
+      charts['weekdayChart'].data.labels = weekItems.map(function(r) { return r.name; });
+      charts['weekdayChart'].data.datasets[0].data = weekItems.map(function(r) { return hrs(r.weekSecs || 0); });
+      charts['weekdayChart'].data.datasets[0].backgroundColor = weekColors;
+      charts['weekdayChart'].data.datasets[0].hoverBackgroundColor = weekColors;
+      charts['weekdayChart'].update('none');
     }
     if (charts['heatmapChart'] && data.last30) {
       var l30dates = Object.keys(data.last30);
-      charts['heatmapChart'].data.datasets.forEach(function(ds) {
-        var proj = ds.label;
-        ds.data = l30dates.map(function(d) { return hrs(((effectiveL30stacked[proj] || {})[d]) || 0); });
+      var dailyHours = l30dates.map(function(d) { return hrs(data.last30[d]); });
+      var movingAvg7d = dailyHours.map(function(_, idx) {
+        var window = dailyHours.slice(Math.max(0, idx - 6), idx + 1);
+        var sum = window.reduce(function(a, b) { return a + b; }, 0);
+        return +(sum / window.length).toFixed(1);
       });
+      charts['heatmapChart'].data.labels = l30dates.map(function(d) { return d.slice(5); });
+      if (charts['heatmapChart'].data.datasets[0]) {
+        charts['heatmapChart'].data.datasets[0].data = movingAvg7d;
+      }
+      if (charts['heatmapChart'].data.datasets[1]) {
+        charts['heatmapChart'].data.datasets[1].data = dailyHours;
+      }
       charts['heatmapChart'].update('none');
+      draw30DayHeatmap(l30dates);
+    }
+    if (data.last6months) {
+      drawMonthChart();
     }
     var el = document.getElementById('todayTotal');
     if (el) {
